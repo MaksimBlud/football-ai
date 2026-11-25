@@ -47,17 +47,23 @@ def test_provider_terms_are_promising_but_do_not_authorize_public_raw_redistribu
     assert terms["retention_after_account_closure_explicitly_defined"] is False
 
 
-def test_free_plan_endpoint_is_confirmed_free_but_season_depth_remains_hold():
+def test_match_statistics_endpoint_entitlement_conflict_remains_hold():
     free = load_audit()["free_plan"]
     assert free["monthly_price_usd"] == 0
     assert free["requests_per_day"] == 1000
     assert free["requests_per_minute"] == 100
     assert free["odds_available"] is False
     assert free["expected_goals_available_on_free"] is False
-    assert free["match_statistics_endpoint_free_status"] == "CONFIRMED_FREE_IN_CURRENT_OPENAPI_AND_SERIE_A_FAQ"
+    assert free["match_statistics_endpoint_free_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
     assert free["openapi_endpoint_min_plan"] == "free"
     assert free["openapi_expected_goals_field_min_plan"] == "solo"
-    assert free["serie_a_page_matrix_still_labels_statistics_endpoint"] is False
+    assert free["serie_a_page_matrix_still_labels_statistics_endpoint"] is True
+    assert free["endpoint_entitlement_status"] == "HOLD_CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert free["endpoint_plan_conflict"] is True
+    assert free["soccer_hub_endpoint_min_plan"] == "free"
+    assert free["serie_a_page_matrix_endpoint_min_plan"] == "edge"
+    assert free["soccer_hub_route_free"] is True
+    assert free["serie_a_faq_route_free"] is True
     assert free["changelog_says_statistics_endpoint_free_from"] == "2026-11-11"
     assert free["season_depth_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION_WITHIN_GLOBAL_PRICING_AND_SERIE_A_PAGE"
     assert free["current_plus_most_recent_season_advertised_on_global_pricing"] is True
@@ -171,3 +177,13 @@ def test_isolated_validation_workflow_is_read_only_and_has_no_live_triggers_or_s
     assert "persist-credentials: false" in workflow
     assert "d23441a48e516b6c34aea4fa41551a30e30af803" in workflow
     assert "ece7cb06caefa5fff74198d8649806c4678c61a1" in workflow
+
+
+def test_provider_plan_conflict_and_rights_manifest_pin_are_explicitly_recorded():
+    audit = load_audit()
+    assert audit["endpoint_plan_observations"]["openapi_minimum_plan"] == "free"
+    assert audit["endpoint_plan_observations"]["soccer_hub_endpoint_table_minimum_plan"] == "free"
+    assert audit["endpoint_plan_observations"]["serie_a_plan_matrix_minimum_plan"] == "edge"
+    assert audit["endpoint_plan_observations"]["resolution"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert audit["security_controls"]["canonical_rights_manifest_pinned_by_git_blob_sha1"] is True
+    assert audit["security_controls"]["caller_supplied_rights_mapping_accepted"] is False

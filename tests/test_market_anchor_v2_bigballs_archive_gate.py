@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 
 import pytest
+from unittest.mock import patch
 
+import market_anchor_v2_bigballs_archive_gate as gate
 from market_anchor_v2_bigballs_archive_gate import (
     ArchiveGateError,
     validate_private_prequote_archive,
@@ -84,7 +86,6 @@ def _bundle():
 def _validate(bundle=None, **overrides):
     rights, archive, match_body, statistics_body, _, _ = bundle or _bundle()
     args = {
-        "rights_manifest": rights,
         "archive_manifest": archive,
         "match_body": match_body,
         "statistics_body": statistics_body,
@@ -95,7 +96,8 @@ def _validate(bundle=None, **overrides):
         "expected_candidate_sha256": CANDIDATE_SHA,
     }
     args.update(overrides)
-    return validate_private_prequote_archive(**args)
+    with patch.object(gate, "_load_verified_rights_manifest", return_value=rights):
+        return validate_private_prequote_archive(**args)
 
 
 def test_valid_synthetic_private_bundle_passes_and_performs_no_inference():
@@ -113,12 +115,29 @@ def test_valid_synthetic_private_bundle_passes_and_performs_no_inference():
 
 
 def test_current_provider_manifest_still_denies_integration():
-    rights = json.loads(RIGHTS.read_text(encoding="utf-8"))
+    rights = gate._load_verified_rights_manifest()
+    assert rights["decision"] == "HOLD_NO_INTEGRATION"
     _, archive, match_body, statistics_body, *_ = _bundle()
-    with pytest.raises(ArchiveGateError, match="provider rights do not authorize integration_allowed"):
-        _validate(
-            (rights, archive, match_body, statistics_body, None, None),
+    with pytest.raises(ArchiveGateError, match="provider rights decision is not APPROVED"):
+        validate_private_prequote_archive(
+            archive_manifest=archive,
+            match_body=match_body,
+            statistics_body=statistics_body,
+            quote_match_id="target-match-1",
+            quote_snapshot_time_utc="2026-11-11T08:00:00Z",
+            quote_created_at_utc="2026-11-11T08:00:01Z",
+            target_kickoff_utc="2026-11-11T18:00:00Z",
+            expected_candidate_sha256=CANDIDATE_SHA,
         )
+
+
+def test_canonical_rights_manifest_git_blob_sha_mismatch_fails_closed(tmp_path, monkeypatch):
+    copied = tmp_path / "rights.json"
+    copied.write_bytes(RIGHTS.read_bytes())
+    monkeypatch.setattr(gate, "RIGHTS_MANIFEST_PATH", copied)
+    monkeypatch.setattr(gate, "RIGHTS_MANIFEST_GIT_BLOB_SHA1", "0" * 40)
+    with pytest.raises(ArchiveGateError, match="Git blob SHA-1 mismatch"):
+        gate._load_verified_rights_manifest()
 
 
 def test_frozen_candidate_file_matches_the_archive_contract():

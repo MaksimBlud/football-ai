@@ -10,7 +10,7 @@ Big Balls Sports Data is a materially stronger free-source candidate than the pr
 
 However, this is **not yet a cleared source for the original frozen V2**:
 
-1. The current official OpenAPI and Serie A FAQ now both confirm that `GET /v1/matches/{id}/statistics` is Free; `expected_goals` remains Solo+. The earlier Edge-plan discrepancy is superseded. The separate Free season-depth conflict remains unresolved.
+1. The current OpenAPI, soccer-hub endpoint table and FAQ say `GET /v1/matches/{id}/statistics` is Free, but the dedicated Serie A page's plan matrix lists advanced match statistics as starting at Edge. This direct first-party conflict supersedes the earlier "Free confirmed" conclusion; do not assume Free entitlement. The separate Free season-depth conflict remains unresolved.
 2. The global pricing page contradicts itself: its summary says Free covers the current season, while its Free-plan bullet says current plus most-recent season; the dedicated Serie A page says current season only. This conflict remains.
 3. Published Serie A team-stat coverage is 4,210 / 4,591 finished matches (91.7%) across the provider's measured archive, not a current-2026/27 per-fixture completeness result.
 4. The upstream provider/field-rights chain and the meaning of per-match first-observed/correction timestamps are not independently established.
@@ -41,7 +41,7 @@ The public global pricing page advertises:
 - current plus most-recent season;
 - scores, standings and statistics.
 
-The dedicated [Serie A page](https://bigballsdata.com/serie-a-api) says Free covers the current season, while the global pricing page advertises current plus most-recent season. This season-depth conflict remains unresolved. The current [OpenAPI specification](https://bigballsdata.com/openapi.json) marks `/v1/matches/{id}/statistics` as Free and limits only `expected_goals` to Solo; the current Serie A FAQ confirms the same. The endpoint is stored-only, with hourly persistence, and the documentation says the upstream feed generally posts within about 30 minutes after full time. It is a post-match source for lagged features, not a live pre-kickoff stats feed. The route's Free entitlement is documented, but current-season per-fixture completeness and exact season depth are not.
+The dedicated [Serie A page](https://bigballsdata.com/serie-a-api) says Free covers the current season, while the global pricing page advertises current plus most-recent season. This season-depth conflict remains unresolved. The current [OpenAPI specification](https://bigballsdata.com/openapi.json), the [soccer-hub endpoint table](https://bigballsdata.com/soccer-api), and the Serie A FAQ say `/v1/matches/{id}/statistics` is Free (with `expected_goals` Solo+). However, the dedicated Serie A page's plan matrix lists advanced match statistics—possession, shots, cards and xG—as starting at Edge. These are contradictory first-party plan statements; Free entitlement for the required Serie A team-stat fields is therefore unresolved and remains HOLD. The endpoint is stored-only, with hourly persistence, and the documentation says the upstream feed generally posts within about 30 minutes after full time. It is a post-match source for lagged features, not a live pre-kickoff stats feed. Current-season per-fixture completeness and exact season depth also remain unverified.
 
 Free odds are not available; odds require the paid Edge plan. This audit does not propose using provider odds. The original `active_lambda=0` remains the existing market anchor, and `shadow_lambda=1` remains research-only.
 
@@ -111,7 +111,7 @@ No retraining, refit, threshold tuning, candidate change or production `.pkl` mo
 - [Coverage](https://bigballsdata.com/coverage)
 - [Changelog](https://bigballsdata.com/whats-new)
 
-**Bottom line:** Big Balls Sports Data is a credible new Free-plan candidate because its published terms expressly allow private response storage and internal model research. It remains **HOLD_NO_INTEGRATION** until the Free-plan/statistics contradictions, current-season field coverage, upstream rights and timestamp semantics are resolved. No provider access or model operation is authorized by this audit.
+**Bottom line:** Big Balls Sports Data remains a technically promising candidate because its terms permit private response storage and internal model research, but the required Serie A statistics endpoint's Free entitlement is contradicted by the dedicated Serie A plan matrix. It remains **HOLD_NO_INTEGRATION** until endpoint/season entitlement, current-season field coverage, upstream rights and timestamp semantics are resolved. No provider access or model operation is authorized by this audit.
 
 ## Superseding official-document check — 2026-11-24 18:19 UTC
 
@@ -147,3 +147,18 @@ A pure-Python validation helper and synthetic regression suite now make the futu
 - The return value explicitly states that upstream first observation is NOT proven, and that no feature calculation, imputation, model inference, Supabase write, or bet occurred.
 
 The synthetic fixtures are contract tests only. They do not represent a real provider response, prove Free-plan account entitlement, resolve season-depth/current-field coverage, or authorize source capture. The original 19-feature order, candidate, weights, `active_lambda=0`, and `shadow_residual_lambda=1` remain unchanged.
+
+
+## Superseding first-party endpoint-plan conflict and rights-gate hardening — 2026-11-25 00:52 UTC
+
+A fresh read of the current official pages found a direct plan conflict for the exact post-match statistics endpoint:
+
+- The [OpenAPI operation](https://bigballsdata.com/openapi.json) says the route is Free and marks only the `expected_goals` field Solo+.
+- The [soccer-hub endpoint table](https://bigballsdata.com/soccer-api) and its FAQ also say the route is Free.
+- The [dedicated Serie A plan matrix](https://bigballsdata.com/serie-a-api) lists advanced match statistics (possession, shots, cards and xG) as starting at Edge, while that same page's FAQ says the route is Free.
+
+This is not a resolved entitlement. The audit manifest now records the exact conflicting statements and keeps `HOLD_NO_INTEGRATION`; no Free key entitlement is assumed. The statistics route remains a stored, post-match dataset (not a pre-kickoff live feed), suitable only as a possible lagged input if rights and timing are later cleared.
+
+The offline archive gate also had a caller-controlled rights-mapping weakness: a caller could pass a synthetic mapping with all approval booleans set to true even while the canonical repository manifest said HOLD. The gate now loads the canonical manifest itself, verifies its exact Git blob SHA-1, and rejects any decision other than `APPROVED`. The public validator no longer accepts caller-supplied rights flags. Synthetic positive-path tests patch only the internal manifest loader; the actual canonical manifest remains HOLD and is tested to fail closed. A future rights approval must change the manifest and its pinned blob SHA in a separately reviewed PR.
+
+No provider account/key, API request, download, raw archive, odds endpoint, Supabase access/write/DDL, protected outcome read, feature calculation, inference, model refit, production `.pkl` change, schedule change or merge occurred.

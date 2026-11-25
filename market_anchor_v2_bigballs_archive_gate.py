@@ -1,9 +1,9 @@
 """Offline-only receipt/SHA gate for a future private Big Balls source archive.
 
 This module performs no HTTP, storage, Supabase, feature calculation, inference,
-or outcome evaluation. The current provider-rights manifest intentionally denies
-integration, so a real archive cannot pass until the owner-approved manifest is
-changed in a separately reviewed research PR.
+or outcome evaluation. It loads the canonical repository rights manifest itself,
+checks its exact Git blob SHA-1, and refuses caller-supplied approval mappings.
+The current manifest intentionally denies integration.
 """
 from __future__ import annotations
 
@@ -11,11 +11,43 @@ import hashlib
 import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Mapping
 
 
 class ArchiveGateError(ValueError):
     """Raised when a source archive cannot be admitted as a pre-quote input."""
+
+
+RIGHTS_MANIFEST_PATH = (
+    Path(__file__).resolve().parent
+    / "research"
+    / "source_rights"
+    / "bigballs_sports_data_20261124.json"
+)
+RIGHTS_MANIFEST_GIT_BLOB_SHA1 = "a2f61d633b187622b14c01eba9ea13b0816c84ee"
+
+
+def _git_blob_sha1(raw: bytes) -> str:
+    header = b"blob " + str(len(raw)).encode("ascii") + b"\0"
+    return hashlib.sha1(header + raw).hexdigest()
+
+
+def _load_verified_rights_manifest() -> dict[str, Any]:
+    """Load the one reviewed rights manifest pinned to its exact Git blob."""
+    path = RIGHTS_MANIFEST_PATH
+    if path.is_symlink() or not path.is_file():
+        raise ArchiveGateError("canonical provider rights manifest is missing or unsafe")
+    raw = path.read_bytes()
+    if _git_blob_sha1(raw) != RIGHTS_MANIFEST_GIT_BLOB_SHA1:
+        raise ArchiveGateError("canonical provider rights manifest Git blob SHA-1 mismatch")
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ArchiveGateError("canonical provider rights manifest is invalid JSON") from exc
+    if not isinstance(value, dict):
+        raise ArchiveGateError("canonical provider rights manifest must be an object")
+    return value
 
 
 def _utc(value: Any, field: str) -> datetime:
@@ -57,7 +89,6 @@ def _nonnegative_int(value: Any, field: str) -> bool:
 
 def validate_private_prequote_archive(
     *,
-    rights_manifest: Mapping[str, Any],
     archive_manifest: Mapping[str, Any],
     match_body: bytes,
     statistics_body: bytes,
@@ -75,6 +106,9 @@ def validate_private_prequote_archive(
     per-field correction times. Missing statistics remain missing; no zero,
     median, feature value, or prediction is fabricated here.
     """
+    rights_manifest = _load_verified_rights_manifest()
+    if rights_manifest.get("decision") != "APPROVED":
+        raise ArchiveGateError("provider rights decision is not APPROVED")
     for key in ("integration_allowed", "automated_capture_authorized", "frozen_inference_authorized"):
         if rights_manifest.get(key) is not True:
             raise ArchiveGateError(f"provider rights do not authorize {key}")

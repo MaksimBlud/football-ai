@@ -1,7 +1,7 @@
 {
   "schema_version": "MARKET_ANCHOR_1X2_V2_PROVIDER_AUDIT_V1",
   "provider": "Big Balls Sports Data",
-  "reviewed_at_utc": "2026-11-24T18:35:00Z",
+  "reviewed_at_utc": "2026-11-25T00:52:28Z",
   "decision": "HOLD_NO_INTEGRATION",
   "official_evidence": {
     "terms_url": "https://bigballsdata.com/legal/terms",
@@ -19,7 +19,11 @@
     "openapi_upstream_aggregation_description": "19+ free-tier upstream sources and 10 MCP scrapers; specific upstream source per field is not identified in the public OpenAPI description",
     "current_serie_a_faq_checked_at_utc": "2026-11-24T18:19:34Z",
     "pricing_url": "https://bigballsdata.com/pricing",
-    "pricing_page_checked_at_utc": "2026-11-24T18:35:00Z"
+    "pricing_page_checked_at_utc": "2026-11-24T18:35:00Z",
+    "soccer_hub_url": "https://bigballsdata.com/soccer-api",
+    "soccer_hub_checked_at_utc": "2026-11-25T00:52:28Z",
+    "serie_a_plan_matrix_checked_at_utc": "2026-11-25T00:52:28Z",
+    "open_api_plan_recheck_at_utc": "2026-11-25T00:52:28Z"
   },
   "provider_terms": {
     "api_response_storage_permitted": true,
@@ -42,9 +46,9 @@
     "odds_available": false,
     "expected_goals_available_on_free": false,
     "match_statistics_endpoint": "GET /v1/matches/{id}/statistics",
-    "match_statistics_endpoint_free_status": "CONFIRMED_FREE_IN_CURRENT_OPENAPI_AND_SERIE_A_FAQ",
+    "match_statistics_endpoint_free_status": "CONFLICTING_OFFICIAL_DOCUMENTATION",
     "changelog_says_statistics_endpoint_free_from": "2026-11-11",
-    "serie_a_page_matrix_still_labels_statistics_endpoint": false,
+    "serie_a_page_matrix_still_labels_statistics_endpoint": true,
     "serie_a_faq_says_route_free_but_expected_goals_solo_plus": true,
     "openapi_endpoint_min_plan": "free",
     "openapi_expected_goals_field_min_plan": "solo",
@@ -53,7 +57,15 @@
     "upstream_posts_after_full_time_minutes_approx": 30,
     "pricing_page_summary_says_current_season": true,
     "pricing_page_plan_bullet_says_current_plus_most_recent_season": true,
-    "pricing_page_internal_season_depth_conflict": true
+    "pricing_page_internal_season_depth_conflict": true,
+    "endpoint_entitlement_status": "HOLD_CONFLICTING_OFFICIAL_DOCUMENTATION",
+    "endpoint_plan_conflict": true,
+    "soccer_hub_endpoint_min_plan": "free",
+    "serie_a_page_matrix_endpoint_min_plan": "edge",
+    "soccer_hub_route_free": true,
+    "serie_a_faq_route_free": true,
+    "serie_a_page_matrix_route_label": "Advanced match statistics: possession, shots, cards and xG; starts at Edge",
+    "soccer_hub_route_label": "Per-team match statistics; route Free, expected_goals field Solo+"
   },
   "coverage": {
     "all_seasons_finished_matches": 4591,
@@ -132,17 +144,33 @@
     "supabase_reads_for_provider_audit": 0
   },
   "decision_reasons": [
-    "Current official OpenAPI and the current Serie A FAQ now confirm GET /v1/matches/{id}/statistics is Free; expected_goals is Solo+ and is not part of the original 19-feature contract.",
+    "The current OpenAPI, soccer-hub endpoint table and FAQ say GET /v1/matches/{id}/statistics is Free, but the dedicated Serie A page's plan matrix lists advanced match statistics as starting at Edge. This first-party conflict leaves Free entitlement unresolved.",
     "The Free season-depth documentation conflicts internally: the global pricing page summary says current season, its Free plan bullet says current plus most-recent season, and the dedicated Serie A page says current season only.",
     "The OpenAPI describes aggregation from 19+ free-tier upstream sources and 10 MCP scrapers but does not identify the upstream source or rights chain for each required field.",
     "The published 91.7% team-stat coverage is an older all-seasons aggregate, not current 2026/27 per-fixture or corner/yellow/red field completeness.",
     "No authenticated Free-plan response or match-level schema sample was reviewed; no account, key or provider request was created.",
     "The statistics route is stored-only and post-match, with hourly persistence and an approximate upstream delay of 30 minutes; per-match first-observed and per-field correction timestamp semantics remain undocumented.",
     "Local receipt time and SHA can prove the project possessed exact response bytes before a later quote, but cannot prove upstream first observation or correction history.",
-    "Retention after account closure and written upstream field-rights clarification remain unresolved; owner authorization has not been provided."
+    "Retention after account closure and written upstream field-rights clarification remain unresolved; owner authorization has not been provided.",
+    "The offline archive gate now loads the canonical repository rights manifest itself and verifies its exact Git blob SHA-1; callers can no longer pass synthetic approval flags to bypass the HOLD."
   ],
   "integration_allowed": false,
   "automated_capture_authorized": false,
   "frozen_inference_authorized": false,
-  "model_retraining_allowed_by_project": false
+  "model_retraining_allowed_by_project": false,
+  "endpoint_plan_observations": {
+    "observed_at_utc": "2026-11-25T00:52:28Z",
+    "openapi_minimum_plan": "free",
+    "soccer_hub_endpoint_table_minimum_plan": "free",
+    "soccer_hub_faq_minimum_plan": "free",
+    "serie_a_faq_minimum_plan": "free",
+    "serie_a_plan_matrix_minimum_plan": "edge",
+    "resolution": "CONFLICTING_OFFICIAL_DOCUMENTATION",
+    "implication": "Free entitlement for required Serie A team statistics is not approved; do not ingest."
+  },
+  "security_controls": {
+    "canonical_rights_manifest_pinned_by_git_blob_sha1": true,
+    "caller_supplied_rights_mapping_accepted": false,
+    "any_future_rights_change_requires_separately_reviewed_manifest_and_pin_update": true
+  }
 }
