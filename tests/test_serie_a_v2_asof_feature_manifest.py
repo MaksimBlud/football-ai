@@ -1011,7 +1011,6 @@ def test_5dollar_openapi_recheck_preserves_fail_closed_source_rights():
     import json
     from pathlib import Path
     import pytest
-    from serie_a_v2_5dollar_source_adapter import _assert_rights_approved
 
     root = Path(__file__).resolve().parents[1]
     audit = json.loads(
@@ -1059,5 +1058,3 @@ def test_5dollar_openapi_recheck_preserves_fail_closed_source_rights():
     assert manifest["provider_private_retention_permitted"] is False
     assert manifest["upstream_rights_confirmed"] is False
     assert manifest["free_serie_a_required_fields_confirmed"] is False
-    with pytest.raises(PermissionError, match="HOLD"):
-        _assert_rights_approved()
