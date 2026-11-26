@@ -137,8 +137,9 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     class Response:
         status_code = 200
         content = csv_completed
-    def fake_get(url, timeout):
-        calls.append((url, timeout))
+    def fake_get(url, timeout, *, allow_redirects):
+        calls.append((url, timeout, allow_redirects))
+        assert allow_redirects is False
         assert url.startswith(PUBLIC_BASE + "/") and url.endswith("/I1.csv")
         assert f"/{current}/" not in url
         return Response()
@@ -147,14 +148,18 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     assert len(audit) == len(calls)
     assert len(history) == 3*len(calls)
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
+    assert all(call[2] is False for call in calls)
 
 
 def test_upstream_status_failure_is_not_filled_with_guessed_data():
     class BadResponse:
         status_code=503
         content=b""
+    def bad_get(url, timeout, *, allow_redirects):
+        assert allow_redirects is False
+        return BadResponse()
     with pytest.raises(RuntimeError,match="unavailable"):
-        fetch_public_history(get=lambda url,timeout: BadResponse())
+        fetch_public_history(get=bad_get)
 
 
 
