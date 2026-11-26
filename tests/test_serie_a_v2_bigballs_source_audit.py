@@ -68,7 +68,7 @@ def test_match_statistics_endpoint_entitlement_conflict_remains_hold():
     assert free["soccer_hub_route_free"] is True
     assert free["serie_a_faq_route_free"] is True
     assert free["changelog_says_statistics_endpoint_free_from"] == "2026-11-11"
-    assert free["season_depth_status"] == "CONFLICTING_OFFICIAL_DOCUMENTATION_WITHIN_GLOBAL_PRICING_AND_SERIE_A_PAGE"
+    assert free["season_depth_status"] == "CONFLICTING_FIRST_PARTY_PRICING_AND_SERIE_A_PAGE"
     assert free["current_plus_most_recent_season_advertised_on_global_pricing"] is True
     assert free["pricing_page_summary_says_current_season"] is True
     assert free["pricing_page_plan_bullet_says_current_plus_most_recent_season"] is True
