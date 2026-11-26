@@ -25,7 +25,7 @@ def test_original_v2_shadow_validation_pins_actions_and_does_not_persist_checkou
     )[0]
     assert "persist-credentials: false" in checkout
     assert "fetch-depth: 0" in checkout
-    assert "permissions:\\n  contents: read" in workflow
+    assert "permissions:\n  contents: read" in workflow
     assert "secrets." not in workflow
     assert "GITHUB_TOKEN" not in workflow
     assert "SUPABASE_URL" not in workflow
@@ -46,7 +46,7 @@ def test_recovery_workflow_keeps_candidate_rebuild_default_denied_and_all_action
     assert "persist-credentials: false" in checkout
     assert "fetch-depth: 0" in checkout
     assert 'MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"' in workflow
-    assert "permissions:\\n  contents: read" in workflow
+    assert "permissions:\n  contents: read" in workflow
     assert "schedule:" not in workflow
     assert "secrets." not in workflow
     assert "GITHUB_TOKEN" not in workflow
