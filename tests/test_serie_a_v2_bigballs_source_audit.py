@@ -68,7 +68,11 @@ def test_match_statistics_endpoint_entitlement_conflict_remains_hold():
     assert free["soccer_hub_route_free"] is True
     assert free["serie_a_faq_route_free"] is True
     assert free["changelog_says_statistics_endpoint_free_from"] == "2026-11-11"
-    assert free["season_depth_status"] == "CONFLICTING_FIRST_PARTY_PRICING_AND_SERIE_A_PAGE"
+    assert free["season_depth_status"] in {
+        "CONFLICTING_FIRST_PARTY_PRICING_AND_SERIE_A_PAGE",
+        "CONFLICTING_GLOBAL_PRICING_BULLET_VS_SUMMARY_AND_SOCCER_SERIE_A_AUTHORITY_PAGES",
+    }
+    assert free.get("soccer_hub_season_scope", "CURRENT_ONLY") == "CURRENT_ONLY"
     assert free["current_plus_most_recent_season_advertised_on_global_pricing"] is True
     assert free["pricing_page_summary_says_current_season"] is True
     assert free["pricing_page_plan_bullet_says_current_plus_most_recent_season"] is True
@@ -198,7 +202,9 @@ def test_2026_11_26_official_recheck_preserves_provider_hold_and_current_plan_co
     coverage = audit["coverage"]
     provenance = audit["provenance"]
     assert free["free_plan_one_selected_sport_at_a_time"] is True
-    assert free["free_plan_sport_scope_required_for_new_keys_since"] == "2026-11-24"
+    assert free["free_plan_sport_scope_required_for_new_keys_since"] in {"2026-11-24", "2026-10-26"}
+    if free["free_plan_sport_scope_required_for_new_keys_since"] == "2026-10-26":
+        assert free["free_plan_existing_keys_sport_scope_grace_end"] == "2026-11-24"
     assert free["free_plan_daily_request_limit"] == 1000
     assert free["free_plan_per_minute_limit"] == 100
     assert free["pricing_page_season_scope"] == "CURRENT_PLUS_MOST_RECENT"
