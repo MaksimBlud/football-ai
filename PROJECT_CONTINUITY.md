@@ -1,3 +1,33 @@
+## 2026-11-26 19:48 UTC — fresh main forward runs and corrected metadata-only Supabase aggregates
+
+This checkpoint supersedes the 18:52 UTC runtime snapshot above. It records read-only evidence only; no public artifact ZIP or CSV was downloaded/opened.
+
+### Fresh main workflow executions
+
+Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+
+- Current-Form Forward-Only Preview [run #45875858604](https://github.com/MaksimBlud/football-ai/actions/runs/45875858604) completed SUCCESS on main. Its log reports **53 tests passed**. It verified source artifact #15133684119 (SHA-256 `4673115cff4428f8967b5ad500222904f4928e6dd90c36c2abf36fef18ede67e`), parent Source Capture run #45853101597 completed at 2026-11-26 15:51:33 UTC, and source age 9,297 seconds at verification. It saw **0 saved quotes**, captured **0 V2 current-form shadows**, and reported `target_outcomes_read=false`, `target_outcomes_scored=false`, `paid_provider_calls=0`, and `production_or_supabase_writes=0`.
+- That run nevertheless uploaded public-repository artifact #15144942432 (441,828 bytes; GitHub ZIP digest `sha256:16b5463901a26153fe1972a475059232a3d072d06f65621a093af068f3050750`). Its artifact metadata identifies the current-form source ZIPs in the upload. The ZIP was not downloaded or opened. This is a fresh confirmation that the main workflow still publishes source bytes publicly; it is not source-rights approval.
+- Original V2 Forward-Only Preview [run #45875076256](https://github.com/MaksimBlud/football-ai/actions/runs/45875076256) completed SUCCESS on main. Its log reports **71 tests passed**; real historical-source attestation verified artifact #15138163372, SHA-256 `9659debecfe148f2234b35cee5def7857e0e15dd3847b1af1f15dae92bc67900`, parent Free Diagnostic run #45862042782, **3,800** historical matches and **10** pre-prospective source CSVs. It then saw **0 quotes**, checked **0 future quotes**, captured **0 V2 previews**, and reported no paid calls or Supabase writes. The resulting small attestation artifact #15145330885 is 1,455 bytes (digest `sha256:8dee1f9cd1df221777208bfc26e7dbf76bc1fafbf3b28a29b5bc72186c285110`); it contains no raw source CSVs based on the logged output size/path summary.
+
+### Corrected read-only Supabase aggregates
+
+The earlier attempted query used non-existent column names and returned an error; it is superseded by the following successful queries using the actual schema fields.
+
+- `public.odds_snapshots`, filtered to `league='SERIE_A'`, using only `league,event_id,snapshot_time_utc,created_at,commence_time_utc`: **625** rows; **620** strictly pre-match rows across **63** events; **0** future events with a strict pre-match quote; latest strict snapshot **2026-10-13 14:48:53.042620 UTC**. Strict timing: `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`.
+- `public.league_finished_results`, filtered to `league='SERIE_A'`, `season='2026-2027'`, and projecting only `match_date,home_team,away_team`: **123** raw rows; **120** canonical directed fixture identities; **3** same-orientation duplicate groups caused by alias variants; **0** reversed-orientation groups; **0** self-fixtures; **0** malformed metadata. No goals, scores, results, settlements or target-outcome fields were selected.
+
+The 120 canonical identities are a metadata-only feature-input count, not 120 forecasts and not the separate prospective outcome-evaluation gate. The latter remains **0/30**.
+
+### Binding controls
+
+- Root hold [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / unmerged at exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, with 8/8 exact-head CI success. It is still required before main can stop the public source/quote workflows.
+- Current candidate chain #975 → #976 → #977 includes the default-false live-access hold, private-repository checks, delayed credentials, source-before-quote guards and strict canonical identity gate. These controls are not active on main until HUMAN-MERGE and a fresh-main audit.
+- No source/provider request, artifact download/open, protected target-outcome read, inference, refit, threshold tuning, production `.pkl` change, Supabase write/DDL, paid API request, merge, main update, promotion, bet, schedule change or other-agent setting change occurred in this checkpoint.
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19-feature order, 20×2 weights, scaler/imputer, training fingerprint, `active_lambda=0`, `shadow_lambda=1` remain unchanged. No Brier/LogLoss superiority claim is available.
+
+---
+
 ## 2026-11-26 18:52 UTC — independent read-only identity-gate count and live-main exposure recheck
 
 This checkpoint supersedes the earlier statement that the main-reported 120-event feature-input count was wholly unverified. It does **not** claim that the #977 Python gate has been executed against live Supabase, and it does not grant source-capture permission.
