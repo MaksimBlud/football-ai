@@ -25,26 +25,46 @@ def test_audit_is_original_v2_only_and_pins_frozen_candidate():
     assert audit["original_v2"]["automatic_promotion"] is False
 
 
-def test_free_plan_is_candidate_only_and_rights_remain_unresolved():
+def test_free_plan_season_window_excludes_2026_27():
     audit = json.loads(RIGHTS.read_text(encoding="utf-8"))
-    assert audit["free_plan"]["price_usd_per_month"] == 0
-    assert audit["free_plan"]["requests_per_day"] == 100
-    assert audit["free_plan"]["statistics_endpoint_listed"] is True
-    assert audit["free_plan"]["season_availability_limited"] is True
-    assert audit["free_plan"]["exact_serie_a_2026_27_statistics_coverage_verified"] is False
-    assert audit["free_plan"]["historical_2016_2026_coverage_verified"] is False
-    assert audit["rights"]["explicit_internal_ml_training_permission"] is False
-    assert audit["rights"]["explicit_model_inference_permission"] is False
-    assert audit["rights"]["explicit_private_raw_response_retention_permission"] is False
-    assert audit["rights"]["upstream_field_rights_identified"] is False
-    assert audit["rights"]["written_provider_clearance_obtained"] is False
+    free = audit["free_plan"]
+    assert free["price_usd_per_month"] == 0
+    assert free["requests_per_day"] == 100
+    assert free["statistics_endpoint_listed"] is True
+    assert free["all_endpoint_families_listed"] is True
+    assert free["season_availability_limited"] is True
+    assert free["covered_seasons_last_confirmed"] == [2022, 2023, 2024]
+    assert free["season_window_evidence_date"] == "2026-10-26"
+    assert free["current_2026_27_available"] is False
+    assert free["coverage_page_last_updated"] == "2026-11-26"
+    assert free["coverage_page_lists_italy_serie_a"] is True
+    assert free["exact_serie_a_2026_27_statistics_coverage_verified"] is False
+    assert free["historical_2016_2026_coverage_verified"] is False
+    assert free["authenticated_coverage_response_obtained"] is False
+
+
+def test_rights_and_private_retention_remain_unresolved():
+    audit = json.loads(RIGHTS.read_text(encoding="utf-8"))
+    rights = audit["rights"]
+    assert rights["data_obtained_from_partners"] is True
+    assert rights["resale_prohibited"] is True
+    assert rights["third_party_rights_may_apply"] is True
+    assert rights["explicit_internal_ml_training_permission"] is False
+    assert rights["explicit_model_inference_permission"] is False
+    assert rights["explicit_private_raw_response_retention_permission"] is False
+    assert rights["upstream_field_rights_identified"] is False
+    assert rights["written_provider_clearance_obtained"] is False
 
 
 def test_source_before_quote_is_not_claimed_without_a_real_capture():
     audit = json.loads(RIGHTS.read_text(encoding="utf-8"))
-    assert audit["provenance"]["per_match_first_observation_time_documented"] is False
-    assert audit["provenance"]["per_field_correction_time_documented"] is False
-    assert audit["provenance"]["source_before_quote_evidence_exists"] is False
+    provenance = audit["provenance"]
+    assert provenance["statistics_available_for_ongoing_or_completed_fixture"] is True
+    assert provenance["statistics_available_for_target_fixture_before_kickoff"] is False
+    assert provenance["per_match_first_observation_time_documented"] is False
+    assert provenance["per_field_correction_time_documented"] is False
+    assert provenance["project_receipt_time_and_sha256_capture_possible_if_authorized"] is True
+    assert provenance["source_before_quote_evidence_exists"] is False
     assert audit["non_actions"]["api_requests"] == 0
     assert audit["non_actions"]["protected_2026_27_outcomes_read"] is False
 
@@ -67,8 +87,8 @@ def test_no_paid_calls_supabase_writes_or_model_mutations_are_claimed():
 def test_audit_document_and_offline_workflow_are_present_and_safe():
     document = DOC.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
-    assert "Decision:** **HOLD" in document
-    assert "written clarification" in document.lower()
+    assert "Audit refresh:** 2026-11-26" in document
+    assert "2022, 2023 and 2024" in document
     assert "source-before-quote" in document.lower()
     assert "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6" in document
     assert "on:" in workflow
@@ -78,3 +98,6 @@ def test_audit_document_and_offline_workflow_are_present_and_safe():
     assert "api-football.com" not in workflow
     assert "SUPABASE" not in workflow
     assert "ODDS_API" not in workflow
+    assert "persist-credentials: false" in workflow
+    assert "de0fac2e4500dabe0009e67214ff5f5447ce83dd" in workflow
+    assert "83679a892e2d95755f2dac6acb0bfd1e9ac5d548" in workflow
