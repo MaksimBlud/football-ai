@@ -1,3 +1,17 @@
+# Continuity update — 2026-11-26 05:51 UTC — source-order, ancestry and pre-match inventory
+
+- Added [the 2026-11-26 Original V2 main source-order and pre-match inventory audit](research/SERIE_A_V2_20261126_MAIN_SOURCE_ORDER_AND_PREMATCH_INVENTORY_AUDIT.md).
+- Fresh main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main continuity blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. No main update or merge.
+- Confirmed the main Original Forward CLI currently reads saved quotes before discovering/authenticating the source archive. The source-first implementation exists in the #938 → #947 ancestry and #951 adds persisted quote chronology, but none of those changes is on main.
+- Confirmed main Current-Form Forward can still call the quote reader after a missing/unverified source result; #957 contains the fail-closed lazy-reader fix but is unmerged.
+- **New ancestry warning:** #975 is a child of #947, not the newer #951 descendant chain. It lacks #948 recursive outcome embargo, #949 immutable action pins, #950 validator pins and #951 quote-row chronology. Its exact-head tests pass, but do not merge #975 as-is; restack its freeze/refit delta onto the #951 descendant chain first.
+- Read-only Supabase `public.odds_snapshots` inventory at 2026-11-26 05:51 UTC: 3,966 rows / 327 events; 3,915 strictly pre-kickoff rows / 327 events; zero currently future-eligible rows/events. Latest valid quote observation 2026-10-13 14:48:53 UTC. No prices, scores, results or target outcomes selected.
+- Original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20×2 weights, 3,799 training rows; `active_lambda=0`, `shadow_lambda=1`; stability FAILED; evaluation gate 0/30.
+- No approved free source yet clears rights, private raw retention, complete feature coverage and point-in-time provenance. Local capture time + SHA is not provider first-observed time.
+- No Supabase writes/DDL, paid requests, target-outcome reads, production pickle changes, weight changes, merge or promotion.
+
+---
+
 # Continuity update — 2026-11-25 22:10 UTC — original V2 runtime, source rights and CI restacks
 
 ## Binding state
