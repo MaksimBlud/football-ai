@@ -9,6 +9,7 @@ on:
       - research/v2-original-forward-rights-persistence-restack-on-944-20261123-run11
       - research/v2-forward-capture-scope-guard-on-945-20261123-run11
       - research/v2-source-provenance-writer-gate-integration-on-946-20261124-run11
+      - research/v2-frozen-candidate-no-refit-restacked-on-947-20261125-run11
       - research/v2-preview-outcome-embargo-on-947-20261124-run11
       - research/v2-source-first-validator-node24-pins-on-949-20261124-run11
     paths:
