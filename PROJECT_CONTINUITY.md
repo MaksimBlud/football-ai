@@ -1,5 +1,16 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 12:07 UTC — pin source-first validation to official Node 24 releases
+
+A fresh upstream release-ref audit found that the source-first validation workflow inherited signed commits from the upstream `releases-v6` branches, but its pins did not resolve directly to official release tags. The workflow now uses the exact official release commits:
+
+- `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` — upstream `actions/checkout@v6.0.2`, verified from `refs/tags/v6.0.2`; its `action.yml` declares `runs.using: node24`.
+- `actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548` — upstream `actions/setup-python@v6.1.0`, verified from `refs/tags/v6.1.0`; its `action.yml` declares `runs.using: node24`.
+
+The offline source-first workflow contract test now asserts these exact tag SHAs and rejects the prior refs. Its existing read-only permissions, `persist-credentials: false`, no-secret/no-Supabase/no-provider/no-schedule contract, Python 3.11/3.12 matrix, and production-`.pkl` diff guard remain unchanged.
+
+This is CI supply-chain hardening only. It does not authorize source capture or inference. The original candidate, 19 features, weights, scaler/imputer, training fingerprint, active_lambda=0, shadow_lambda=1, and both frozen gates remain unchanged. No source or odds request, Supabase operation, protected outcome read, main update, merge, schedule change, or other-agent change occurred. Exact-head CI is required for this commit. Draft / HUMAN-MERGE only.
+
 ## 2026-11-26 12:01 UTC — keep frozen shadow CI compatible with private repository storage
 
 A second review of the #976 shadow-validation job found a post-checkout `git fetch origin main` after checkout had deliberately set `persist-credentials: false`. That extra network fetch is unnecessary and would lack persisted authentication when the repository is made private. The pinned actions/checkout v4.2.2 README confirms `fetch-depth: 0` fetches all history for all branches and tags, including the local `origin/main` ref needed by the existing production-`.pkl` diff guard.
