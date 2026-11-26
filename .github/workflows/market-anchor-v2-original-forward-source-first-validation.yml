@@ -48,6 +48,7 @@ on:
       - "tests/test_serie_a_v2_quote_persistence_timestamp_contract.py"
       - "tests/test_serie_a_v2_source_first_validation_workflow_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
+      - "PROJECT_CONTINUITY.md"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
