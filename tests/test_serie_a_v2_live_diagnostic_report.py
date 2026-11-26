@@ -137,12 +137,16 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
     class Response:
         status_code = 200
         content = csv_completed
+
+        def __init__(self, url):
+            self.url = url
+
     def fake_get(url, timeout, *, allow_redirects):
         calls.append((url, timeout, allow_redirects))
         assert allow_redirects is False
         assert url.startswith(PUBLIC_BASE + "/") and url.endswith("/I1.csv")
         assert f"/{current}/" not in url
-        return Response()
+        return Response(url)
     history, audit = fetch_public_history(get=fake_get)
     assert len(calls) == 10
     assert len(audit) == len(calls)
