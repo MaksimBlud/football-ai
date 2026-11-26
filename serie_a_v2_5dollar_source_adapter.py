@@ -36,6 +36,7 @@ SERIE_A_PROVIDER_LEAGUE_ID = 3405541143
 CURRENT_SERIE_A_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_SERIE_A_SEASON_API_PARAMETER = CURRENT_SERIE_A_SEASON[:4]
 MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
+PREREGISTERED_PROTOCOL_BLOB_SHA1 = "65729e9639720e67624c1481190aa22ae606f151"
 ALLOWED_PLANS = frozenset(("free",))
 ALLOWED_QUOTE_FIELDS = frozenset((
     "event_id", "league", "home_team", "away_team",
@@ -146,7 +147,7 @@ def _assert_rights_approved() -> dict:
 
 
 def _validate_feature_source_gate(capture_manifest: dict, request_started: datetime) -> dict:
-    """Require the existing 30-event metadata-only gate before any current-season result bytes are read."""
+    """Require the exact preregistered 30-event gate and its strict identity audit."""
     gate = capture_manifest.get("feature_source_gate")
     if not isinstance(gate, dict):
         raise PermissionError("current-form feature-source gate is missing or closed")
@@ -164,6 +165,71 @@ def _validate_feature_source_gate(capture_manifest: dict, request_started: datet
         or gate.get("passed") is not True
     ):
         raise PermissionError("current-form feature-source gate is not valid or has fewer than 30 metadata-only events")
+
+    # A count alone is insufficient: the upstream source-capture manifest must
+    # carry the strict raw/canonical identity audit produced by the restacked
+    # current-form gate. In particular, canonical count must equal the count
+    # used for admission, and the audit's duplicate/alias arithmetic must close.
+    identity_audit = gate.get("identity_audit")
+    if not isinstance(identity_audit, dict):
+        raise PermissionError("current-form feature-source gate lacks the strict canonical identity audit")
+    count_fields = (
+        "raw_metadata_rows",
+        "eligible_metadata_rows_before_cutoff",
+        "metadata_rows_on_or_after_cutoff",
+        "raw_unique_fixture_identities",
+        "canonical_unique_fixture_identities",
+        "exact_duplicate_metadata_rows",
+        "alias_collapsed_duplicate_identities",
+        "alias_collision_count",
+    )
+    counts = {}
+    for field in count_fields:
+        value = identity_audit.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise PermissionError("current-form identity audit has an invalid count: " + field)
+        counts[field] = value
+    examples = identity_audit.get("alias_collision_examples")
+    if (
+        counts["raw_metadata_rows"]
+        != counts["eligible_metadata_rows_before_cutoff"] + counts["metadata_rows_on_or_after_cutoff"]
+        or counts["eligible_metadata_rows_before_cutoff"] < observed
+        or counts["raw_unique_fixture_identities"] > counts["eligible_metadata_rows_before_cutoff"]
+        or counts["canonical_unique_fixture_identities"] != observed
+        or counts["canonical_unique_fixture_identities"] > counts["raw_unique_fixture_identities"]
+        or counts["exact_duplicate_metadata_rows"]
+        != counts["eligible_metadata_rows_before_cutoff"] - counts["raw_unique_fixture_identities"]
+        or counts["alias_collapsed_duplicate_identities"]
+        != counts["raw_unique_fixture_identities"] - counts["canonical_unique_fixture_identities"]
+        or counts["alias_collision_count"] > counts["canonical_unique_fixture_identities"]
+        or not isinstance(examples, list)
+        or len(examples) != min(counts["alias_collision_count"], 20)
+        or any(not isinstance(example, dict) for example in examples)
+    ):
+        raise PermissionError("current-form identity audit counts are inconsistent with the canonical event gate")
+
+    protocol_sha = gate.get("protocol_blob_sha1")
+    if (
+        gate.get("uses_exact_preregistered_outcome_read_gate") is not True
+        or protocol_sha != PREREGISTERED_PROTOCOL_BLOB_SHA1
+    ):
+        raise PermissionError("current-form feature-source gate is not pinned to the frozen preregistered protocol")
+
+    preregistered_gate = capture_manifest.get("preregistered_outcome_read_gate")
+    if not isinstance(preregistered_gate, dict) or any((
+        preregistered_gate.get("protocol_path") != "experiments/market_anchor_1x2_v2_protocol.json",
+        preregistered_gate.get("protocol_blob_sha1") != PREREGISTERED_PROTOCOL_BLOB_SHA1,
+        preregistered_gate.get("required_completed_primary_events") != MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+        preregistered_gate.get("primary_league") != "SERIE_A",
+        preregistered_gate.get("observed_completed_primary_events") != observed,
+        preregistered_gate.get("checked_at_utc") != gate.get("checked_at_utc"),
+        preregistered_gate.get("metadata_fields_read") != ["match_date", "home_team", "away_team"],
+        preregistered_gate.get("score_or_result_fields_selected_for_gate") is not False,
+        preregistered_gate.get("identity_audit") != identity_audit,
+        preregistered_gate.get("passed") is not True,
+    )):
+        raise PermissionError("top-level preregistered outcome-read gate does not match the strict feature-source gate")
+
     checked_at = _parse_utc(gate.get("checked_at_utc"), "feature_source_gate.checked_at_utc")
     if checked_at >= request_started:
         raise ValueError("feature-source gate must be checked strictly before the first source request")
@@ -202,6 +268,9 @@ def _validate_feature_source_gate(capture_manifest: dict, request_started: datet
         "checked_at_utc": checked_at.isoformat(),
         "metadata_fields_read": ["match_date", "home_team", "away_team"],
         "score_or_result_fields_selected_for_gate": False,
+        "identity_audit": identity_audit,
+        "protocol_blob_sha1": PREREGISTERED_PROTOCOL_BLOB_SHA1,
+        "uses_exact_preregistered_outcome_read_gate": True,
         "passed": True,
     }
 
