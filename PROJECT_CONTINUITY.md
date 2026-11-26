@@ -1,3 +1,16 @@
+## 2026-11-26 — strict canonical feature-input gate is still a sibling blocker
+
+A follow-up code/ancestry check qualifies the 120-event count reported by main current-form Source Capture:
+
+- Main `serie_a_v2_current_form_source_capture.py` still parses string dates with `date.fromisoformat(match_date[:10])`, which truncates timestamp-bearing or suffixed values instead of requiring canonical date-only `YYYY-MM-DD`. It also does not reject reversed duplicate home/away identities after the V2-local team alias.
+- The strict canonical date and reversed-duplicate audit already exists in PR #966, exact HEAD `b086251e58eb78af018dd5159231c0f7cfa68bb2`, based on #958. It requires date-only canonical strings and reconciles raw/canonical identities before accepting the 30-event metadata gate.
+- Exact #966 Source-First validation runs #45640158400, #45640379677 and #45640401439 all succeeded; each Python 3.11/3.12 job reports **543 passed** and the production `.pkl` diff guard passed.
+- **#966 is not an ancestor of #975 or #976**: both #966 and #975 currently branch from #958. Therefore the 120-event count in main's 2026-11-26 run is a runtime-reported metadata count under the more permissive main parser, not yet strict-canonical validated evidence for the frozen V2 feature-input gate. Do not treat it as a fully validated gate until #966 is integrated/restacked into the current candidate chain and rechecked.
+- No outcome fields were selected by the gate query; the separate 30-prospective-forecast outcome-read gate remains closed at 0/30.
+
+This is an existing independent PR, not a reason to duplicate its implementation. HUMAN-MERGE / restack review is required; no branch ancestry or main ref was changed here.
+
+
 ## 2026-11-26 16:50 UTC — fresh main runtime proof, source-rights hold, and prospective quote status
 
 This checkpoint was added to the existing #976 branch after reading fresh main, the main continuity file, current V2 workflows, exact GitHub Actions jobs/logs/artifact metadata, open V2 PR metadata, and a read-only Supabase temporal aggregate. No artifact ZIP or source CSV bytes were downloaded or opened.
