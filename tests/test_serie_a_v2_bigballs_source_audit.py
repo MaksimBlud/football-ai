@@ -61,7 +61,7 @@ def test_match_statistics_endpoint_entitlement_conflict_remains_hold():
     assert free["openapi_endpoint_min_plan"] == "free"
     assert free["openapi_expected_goals_field_min_plan"] == "solo"
     assert free["serie_a_page_matrix_still_labels_statistics_endpoint"] is True
-    assert free["endpoint_entitlement_status"] == "HOLD_CONFLICTING_OFFICIAL_DOCUMENTATION"
+    assert free["endpoint_entitlement_status"] == "HOLD_CONFLICTING_FIRST_PARTY_SERIE_A_MATRIX_AND_FAQ_OPENAPI"
     assert free["endpoint_plan_conflict"] is True
     assert free["soccer_hub_endpoint_min_plan"] == "free"
     assert free["serie_a_page_matrix_endpoint_min_plan"] == "edge"
