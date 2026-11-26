@@ -1,5 +1,36 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 11:02 UTC — Recovery workflow action pins restacked on current frozen V2 chain
+
+This entry supersedes earlier #976 workflow-action SHA references. The changes are limited to the original frozen V2 recovery workflow and its offline security regression.
+
+### Restacked action references, independently verified upstream
+
+The #976 child branch now carries the already-reviewed recovery-workflow pin improvement from sibling PR #972, while retaining #976's stricter default-deny and private-repository controls.
+
+- `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683` — upstream tag `actions/checkout@v4.2.2`.
+- `actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065` — upstream tag `actions/setup-python@v5.6.0`.
+- `actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02` — upstream tag `actions/upload-artifact@v4.6.2`.
+
+Each exact SHA was independently checked against the corresponding upstream Git tag ref API; all three refs resolve directly to the listed commit SHA.
+
+### Restack details
+
+- Recovery workflow update commit: `03d7e6b92d6933b635bbb93a5b92cf5bb7fddbe8`.
+- Static regression update commit: `c56b48d0f44a558dabd0c312768368d9f9bf0a59`.
+- The recovery workflow still has `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED: "false"`, read-only `contents` permissions, no schedule, no provider/Supabase secrets, `persist-credentials: false`, and the private-repository check before any gated rebuild or artifact publication.
+- The existing test continues to assert the stronger #976 deny-all/private-storage conditions and now asserts the three independently verified immutable action SHAs.
+- Sibling PR #972 remains OPEN on its separate #968 branch; its exact-head Shadow Validation [#45718103653](https://github.com/MaksimBlud/football-ai/actions/runs/45718103653) passed **12 tests**, but that result is not substituted for the current #976 restack CI.
+
+### Validation state
+
+- Immediately preceding #976 HEAD `8fd2a54f1a1237bbc558a8a21f51b5873f076388` passed exact-head Shadow Validation [#45806378789](https://github.com/MaksimBlud/football-ai/actions/runs/45806378789): **214 passed**.
+- The same preceding HEAD passed Source-First Validation [#45806378816](https://github.com/MaksimBlud/football-ai/actions/runs/45806378816): **534 passed on Python 3.11 and 534 on Python 3.12**; compile and production `.pkl` diff guards passed.
+- The new action-pin commits above change the recovery workflow and its test. This continuity update is the final commit for this restack; exact-head Shadow and Source-First CI must run again on the resulting new #976 HEAD. Earlier results validate only `8fd2a54...`.
+
+No candidate/model/feature/weight/scaler/imputer change, provider request, odds read, Supabase operation, protected-outcome read, production `.pkl` change, main update, merge, promotion, bet, schedule or other-agent change occurred. HUMAN-MERGE only.
+
+
 ## 2026-11-26 10:53 UTC — Superseding exact-head checkpoint for Original V2 #976
 
 This entry supersedes the earlier #976 SHA references below. It records read-only verification only; no model or main-branch changes.
