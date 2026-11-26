@@ -930,6 +930,7 @@ def test_5dollar_adapter_requires_metadata_only_gate_before_request_and_closed_t
 
     capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
     capture["feature_source_gate"]["checked_at_utc"] = capture["request_started_at_utc"]
+    capture["preregistered_outcome_read_gate"]["checked_at_utc"] = capture["request_started_at_utc"]
     with pytest.raises(ValueError, match="strictly before the first source request"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)
 
@@ -1076,6 +1077,7 @@ def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reve
     capture["pages"][0]["request_started_at_utc"] = capture["request_started_at_utc"]
     capture["pages"][0]["response_received_at_utc"] = capture["response_received_at_utc"]
     capture["feature_source_gate"]["checked_at_utc"] = "2026-11-13T07:59:58+00:00"
+    capture["preregistered_outcome_read_gate"]["checked_at_utc"] = "2026-11-13T07:59:58+00:00"
     quotes[0]["away_team"] = "Inter Milan"
     quotes[0]["snapshot_time_utc"] = "2026-11-13T08:05:00+00:00"
     quotes[0]["created_at"] = "2026-11-13T08:05:01+00:00"
