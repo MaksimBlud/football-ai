@@ -14,6 +14,7 @@ on:
       - research/v2-current-form-source-capture-rights-on-951-20261124-run11
       - research/v2-current-form-atomic-redirect-clock-guards-on-954-20261124-run11
       - research/v2-football-data-fair-use-refresh-20261124-run11
+      - research/v2-frozen-candidate-no-refit-restacked-on-947-20261125-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_current_form_source_capture.py"
@@ -56,6 +57,7 @@ on:
       - "tests/test_serie_a_v2_source_first_validation_workflow_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
       - ".github/workflows/market-anchor-v2-original-forward-inference-rights-validation.yml"
+      - "PROJECT_CONTINUITY.md"
   pull_request:
     types: [opened, synchronize, reopened, edited]
     paths:
@@ -100,6 +102,7 @@ on:
       - "tests/test_serie_a_v2_source_first_validation_workflow_contract.py"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
       - ".github/workflows/market-anchor-v2-original-forward-inference-rights-validation.yml"
+      - "PROJECT_CONTINUITY.md"
 
 permissions:
   contents: read

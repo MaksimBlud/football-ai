@@ -66,22 +66,20 @@ SOURCE_NAME = {
 RESULT_TO_INT = {"H": 0, "D": 1, "A": 2}
 
 
+def _deny_retired_saved_cohort_replay() -> None:
+    """Fail closed: the retrospective replay/refit path is permanently retired."""
+    raise PermissionError(
+        "saved-cohort replay/refit is retired; use the SHA-pinned frozen candidate "
+        "and the separately gated pre-kickoff V2 forward path"
+    )
+
+
 def _require_training_data_access() -> None:
-    """Require both provider AI-training permission and separately cleared private source capture."""
-    require_ai_model_training_permission()
-    require_v2_source_capture_access()
+    _deny_retired_saved_cohort_replay()
 
 
 def _require_post_outcome_replay_gate() -> None:
-    """Hard hold: this saved 10-event retrospective replay is not the prospective evaluation cohort.
-
-    No environment flag or user-supplied argument can open this gate. A future
-    change requires a separate reviewed PR after the preregistered prospective
-    evaluation gate is satisfied.
-    """
-    raise PermissionError(
-        "saved-cohort post-outcome replay is disabled until the separate preregistered prospective evaluation gate is opened"
-    )
+    _deny_retired_saved_cohort_replay()
 
 
 
@@ -101,6 +99,7 @@ def sha256_bytes(payload: bytes) -> str:
 
 
 def load_module(name: str, path: Path):
+    _deny_retired_saved_cohort_replay()
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load frozen module {name} from {path}")
@@ -111,6 +110,7 @@ def load_module(name: str, path: Path):
 
 
 def load_frozen_modules(source_dir: Path):
+    _deny_retired_saved_cohort_replay()
     for filename, expected_blob in EXPECTED_FROZEN_GIT_BLOBS.items():
         path = source_dir / filename
         if not path.is_file():
@@ -139,7 +139,7 @@ def load_frozen_modules(source_dir: Path):
 
 
 def download_csv(code: str) -> tuple[pd.DataFrame, str]:
-    _require_training_data_access()
+    _deny_retired_saved_cohort_replay()
     url = BASE_URL.format(code=code)
     response = requests.get(url, timeout=60, headers={"User-Agent": "football-ai-frozen-replay/1"})
     response.raise_for_status()
@@ -149,7 +149,7 @@ def download_csv(code: str) -> tuple[pd.DataFrame, str]:
 
 
 def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, pd.DataFrame]]:
-    _require_training_data_access()
+    _deny_retired_saved_cohort_replay()
     raw_frames: list[pd.DataFrame] = []
     hashes: dict[str, str] = {}
     by_code: dict[str, pd.DataFrame] = {}
@@ -180,7 +180,7 @@ def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, p
 
 
 def build_target_features(lab, historical_by_code: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, str, dict[str, int]]:
-    _require_post_outcome_replay_gate()
+    _deny_retired_saved_cohort_replay()
     targets = _load_saved_targets_after_gate()
     require_v2_source_capture_access()
     require_v2_inference_access()
@@ -230,7 +230,7 @@ def build_target_features(lab, historical_by_code: dict[str, pd.DataFrame]) -> t
 
 
 def validate_targets() -> tuple[dict[str, Any], ...]:
-    _require_post_outcome_replay_gate()
+    _deny_retired_saved_cohort_replay()
     targets = _load_saved_targets_after_gate()
     if len(targets) != 10:
         raise RuntimeError("frozen Serie A parent cohort must contain exactly 10 events")
@@ -251,7 +251,7 @@ def validate_targets() -> tuple[dict[str, Any], ...]:
 
 
 def replay(source_dir: Path, *, save_research_candidate: bool = False) -> dict[str, Any]:
-    _require_post_outcome_replay_gate()
+    _deny_retired_saved_cohort_replay()
     targets = validate_targets()
     lab, v1, v2 = load_frozen_modules(source_dir)
     training, historical_hashes, historical_by_code = build_training_frame(lab)
@@ -342,7 +342,7 @@ def assert_same_frozen_replay(report: dict[str, Any]) -> None:
     Old observations are already open: this is a *post-outcome diagnostic* replay.
     No changed training source, quote, candidate or reported result is accepted.
     """
-    _require_post_outcome_replay_gate()
+    _deny_retired_saved_cohort_replay()
     expected_path = Path(__file__).resolve().parent / (
         "experiments/market_anchor_v2_saved_cohort_replay_report.json"
     )
@@ -403,14 +403,8 @@ def assert_same_frozen_replay(report: dict[str, Any]) -> None:
 
 
 def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
-    """Recover the old Serie A JSON weights WITHOUT reading current-season results.
-
-    The 2026/27 Football-Data CSV is intentionally NOT fetched: it grows over
-    time and its full-file SHA naturally differs from September. All ten
-    TRAIN_SEASONS source file hashes, the model artifact SHA, and the fixed
-    training fingerprint MUST still match their immutable September reference.
-    """
-    _require_training_data_access()
+    """Historical refit/recovery is retired; the original candidate is already SHA-pinned."""
+    _deny_retired_saved_cohort_replay()
     _lab, _v1, v2 = load_frozen_modules(source_dir)
     from_file = Path(__file__).resolve().parent / (
         "experiments/market_anchor_v2_saved_cohort_replay_report.json"
@@ -500,6 +494,7 @@ def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
 
 
 def main() -> None:
+    _deny_retired_saved_cohort_replay()
     parser = argparse.ArgumentParser()
     parser.add_argument("--frozen-source-dir", type=Path, required=True)
     parser.add_argument("--restore-candidate-only", action="store_true",
