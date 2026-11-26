@@ -363,6 +363,41 @@ def _synthetic_5dollar_bundle(tmp_path, fixtures=None, quote=None):
             "checked_at_utc": "2026-11-12T07:59:58+00:00",
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "identity_audit": {
+                "raw_metadata_rows": 30,
+                "eligible_metadata_rows_before_cutoff": 30,
+                "metadata_rows_on_or_after_cutoff": 0,
+                "raw_unique_fixture_identities": 30,
+                "canonical_unique_fixture_identities": 30,
+                "exact_duplicate_metadata_rows": 0,
+                "alias_collapsed_duplicate_identities": 0,
+                "alias_collision_count": 0,
+                "alias_collision_examples": [],
+            },
+            "uses_exact_preregistered_outcome_read_gate": True,
+            "protocol_blob_sha1": "65729e9639720e67624c1481190aa22ae606f151",
+            "passed": True,
+        },
+        "preregistered_outcome_read_gate": {
+            "protocol_path": "experiments/market_anchor_1x2_v2_protocol.json",
+            "protocol_blob_sha1": "65729e9639720e67624c1481190aa22ae606f151",
+            "required_completed_primary_events": 30,
+            "primary_league": "SERIE_A",
+            "observed_completed_primary_events": 30,
+            "checked_at_utc": "2026-11-12T07:59:58+00:00",
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "score_or_result_fields_selected_for_gate": False,
+            "identity_audit": {
+                "raw_metadata_rows": 30,
+                "eligible_metadata_rows_before_cutoff": 30,
+                "metadata_rows_on_or_after_cutoff": 0,
+                "raw_unique_fixture_identities": 30,
+                "canonical_unique_fixture_identities": 30,
+                "exact_duplicate_metadata_rows": 0,
+                "alias_collapsed_duplicate_identities": 0,
+                "alias_collision_count": 0,
+                "alias_collision_examples": [],
+            },
             "passed": True,
         },
         "feature_policy": {
@@ -440,6 +475,48 @@ def test_5dollar_offline_adapter_maps_exact_original_19_features_and_verifies_sh
     assert report["eligible_for_product_publication"] is False
     assert report["scored"] is False
     assert report["source_capture"]["raw_payload_emitted"] is False
+    assert report["source_capture"]["feature_input_gate"]["identity_audit"]["canonical_unique_fixture_identities"] == 30
+    assert report["source_capture"]["feature_input_gate"]["protocol_blob_sha1"] == "65729e9639720e67624c1481190aa22ae606f151"
+
+
+def test_5dollar_adapter_rejects_missing_strict_identity_audit(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    del capture["feature_source_gate"]["identity_audit"]
+    with pytest.raises(PermissionError, match="strict canonical identity audit"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def test_5dollar_adapter_rejects_inconsistent_canonical_identity_count(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["feature_source_gate"]["identity_audit"]["canonical_unique_fixture_identities"] = 29
+    with pytest.raises(PermissionError, match="identity audit counts are inconsistent"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def test_5dollar_adapter_rejects_unpinned_preregistered_protocol(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    capture["feature_source_gate"]["protocol_blob_sha1"] = "0" * 40
+    with pytest.raises(PermissionError, match="not pinned to the frozen preregistered protocol"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def test_5dollar_adapter_rejects_missing_top_level_preregistered_gate(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import build_manifest_from_private_archive
+
+    capture, quotes, rights = _synthetic_5dollar_bundle(tmp_path)
+    del capture["preregistered_outcome_read_gate"]
+    with pytest.raises(PermissionError, match="top-level preregistered outcome-read gate"):
+        build_manifest_from_private_archive(tmp_path, capture, quotes)
 
 
 def test_5dollar_adapter_rejects_group_or_world_accessible_archive_directory(tmp_path):
