@@ -1,3 +1,39 @@
+## 2026-11-26 21:48 UTC — live Supabase metadata-only identity replay and existing table schema audit
+
+This checkpoint is read-only evidence for the original MARKET_ANCHOR_1X2_V2 cohort. It does not authorize a provider request, source archive, inference or outcome read.
+
+### Strict current-form feature-input identity replay
+
+- Default-branch main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`.
+- A fresh Supabase SELECT against `public.league_finished_results` used exactly `match_date,home_team,away_team`, filtered to `league='SERIE_A'`, `season='2026-2027'`, and dates before the UTC cutoff 2026-11-26. No goals, scores, results, settlements, odds or prediction fields were selected.
+- Returned metadata: **123 rows**, **123 raw unique directed identities**, **120 canonical unique directed identities**, **3 alias-collapsed duplicate identity groups**, **0 exact duplicates**, **0 reversed home/away conflicts**, **0 self-fixtures**, and **0 malformed/date-format rows**.
+- The canonical replay used the exact alias semantics in the #977 branch: runtime aliases `Inter → Inter Milan`, `Milan → AC Milan`, `Roma → AS Roma`, `Verona → Hellas Verona`, plus V2-local `Atalanta BC → Atalanta`. The three collisions are Atalanta/Sassuolo on 2026-08-23, Atalanta/Bologna on 2026-08-31, and AS Roma/Atalanta on 2026-09-05.
+- This independently confirms the **metadata count** exceeds the 30-event feature-input threshold. It is an independent read-only replay of the #977 canonicalization logic, **not** execution of the Python source-capture function against live Supabase. The function's source-capture permission guard remains closed; no CSV/source download followed.
+
+### Pre-match odds inventory
+
+- Fresh read-only aggregate of `public.odds_snapshots` used only `league,event_id,snapshot_time_utc,created_at,commence_time_utc`.
+- Serie A: **625** total rows; **620** satisfy `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`; those rows cover **63** events. **0** future events have a strict pre-match row. Latest strict snapshot: **2026-10-13 14:48:53.042620 UTC**.
+- No odds prices or match outcomes were selected.
+
+### Existing Supabase table schema is not a substitute for a provenance-qualified source
+
+Schema-only inspection (no table rows read) found `match_statistics`, `match_stats`, `matches`, `league_corner_results`, and `league_finished_results`.
+- `match_statistics` and `match_stats` expose match-level stats but their schemas do not include a source identifier, raw-response SHA, or source-receipt timestamp suitable for the V2 source-before-quote contract.
+- `matches` includes scores, corners, cards and odds columns, but its schema likewise does not expose source receipt/SHA provenance. No rows were read.
+- `league_corner_results` has `source_fingerprint`, `source_fetched_at_utc`, and `persisted_at_utc`, but the schema only exposes goals/corners, not the full original V2 card/corner/result feature source contract. No rows were read.
+- Therefore none of these tables is accepted as a replacement for a lawful, private, exact-byte source archive with receipt-before-quote proof. No legacy production pipeline is revived.
+
+### Main runtime and integration blocker
+
+- Main Original Forward workflow blob SHA: `48ce3b0d8e31c4cf293b94500e9c320047311467`. It still reads saved quotes before discovering/attesting the source archive; this ordering remains uncorrected on main.
+- Main Original Forward run [#45875076256](https://github.com/MaksimBlud/football-ai/actions/runs/45875076256) and Current-Form Forward run [#45875858604](https://github.com/MaksimBlud/football-ai/actions/runs/45875858604) completed SUCCESS but found **0** saved quotes and produced **0** V2 shadows. The current-form run uploaded a public source artifact; it was not downloaded or opened. This is not permission to retain/use the data.
+- Root default-deny PR [#781](https://github.com/MaksimBlud/football-ai/pull/781) remains open/unmerged at exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, with 8/8 exact-head workflows SUCCESS. HUMAN-MERGE remains mandatory.
+
+### Frozen V2 invariants
+
+Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19-feature order, 20×2 weights, scaler/imputer and training fingerprint are unchanged. `active_lambda=0`; `shadow_lambda=1` remains research-only. The separate prospective outcome-read gate remains **0/30 eligible completed forecasts**. No protected 2026/27 outcomes were read, no Brier/LogLoss superiority is established, and no source request, archive download, inference, refit, threshold tuning, Supabase write/DDL, paid call, production `.pkl` change, merge, promotion, bet or schedule change occurred.
+
 ## 2026-11-26 19:48 UTC — fresh main forward runs and corrected metadata-only Supabase aggregates
 
 This checkpoint supersedes the 18:52 UTC runtime snapshot above. It records read-only evidence only; no public artifact ZIP or CSV was downloaded/opened.
