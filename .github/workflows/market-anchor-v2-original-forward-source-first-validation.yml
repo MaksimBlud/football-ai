@@ -13,6 +13,7 @@ on:
       - research/v2-source-first-validator-node24-pins-on-949-20261124-run11
       - research/v2-current-form-source-capture-rights-on-951-20261124-run11
       - research/v2-current-form-atomic-redirect-clock-guards-on-954-20261124-run11
+      - research/v2-football-data-fair-use-restack-on-957-20261125-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "serie_a_v2_current_form_source_capture.py"
