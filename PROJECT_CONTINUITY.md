@@ -1,5 +1,18 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 — Original V2 frozen-candidate restack onto persisted-quote chronology
+
+This entry supersedes the earlier statement that the frozen-candidate change was based directly on #947.
+
+- The frozen-candidate change from former PR #975 was restacked onto the complete original-forward chronology chain ending at PR #951 HEAD `f1ad14e783b4f03e8887516f6805d4650233fead`.
+- The initial PR-base retarget exposed conflicts in three shared files: the source-first validation workflow, frozen-shadow preview tests, and this continuity file. Those were merged explicitly rather than discarding either side.
+- The resulting restack branch is `research/v2-frozen-candidate-no-refit-restacked-on-951-20261126-run11`; GitHub compare against #951 HEAD reports **11 commits ahead / 0 behind** and exactly 11 changed files. The diff is limited to the original V2 freeze/replay retirement, evidence-attribution audit, tests, workflow branch trigger and continuity record.
+- No overlap remains in the two Original Forward implementation files changed by #951. Its persisted quote-row checks remain in the base. The frozen-shadow preview test changes from #948 were preserved and combined with #975's synthetic direct-access fixture.
+- The source-first validation workflow retains the #948/#950 changes and includes the original frozen-candidate branch trigger.
+- Exact-head CI on this combined restack is **pending**; prior green runs on the separate #951 and former #975 heads do not substitute for it.
+- Candidate SHA remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 features, 20×2 weights, scaler/imputer and training fingerprint are unchanged. `active_lambda=0`, `shadow_lambda=1`, stability FAILED, evaluation 0/30 CLOSED.
+- No main update, merge, provider access, odds read, Supabase write/DDL, protected outcome read, refit, production `.pkl` change, promotion or schedule/agent change.
+
 ## 2026-11-26 — Original MARKET_ANCHOR_1X2_V2 recovery/runtime checkpoint
 
 **Source of truth at this audit:** fresh `main` SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`; this file's pre-update blob SHA `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`. Main has not advanced. Scope is exclusively the original frozen `MARKET_ANCHOR_1X2_V2` candidate `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
