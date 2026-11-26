@@ -1,5 +1,43 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 — exact-head V2 CI, main runtime and pre-match ledger checkpoint
+
+### #976 exact-head code validation
+
+- Code HEAD: `e2e3961e1f7c842b8794daa2ca735c6421c57ea0`; base #975: `bf5446c2692b8a0e9955f685b88d353f24d486e6`.
+- Shadow Validation [#45815684809](https://github.com/MaksimBlud/football-ai/actions/runs/45815684809): **215 passed**, compile and production-`.pkl` diff guard passed.
+- Original V2 Source-First Validation [#45815684666](https://github.com/MaksimBlud/football-ai/actions/runs/45815684666): **534 passed on Python 3.11 and 534 on Python 3.12**; compile and production-`.pkl` diff guards passed.
+- La Liga workflow [#45815684689](https://github.com/MaksimBlud/football-ai/actions/runs/45815684689) also succeeded as a side effect of the existing continuity path filter; no La Liga workflow settings were changed.
+- The code HEAD is **19 commits ahead / 0 behind** its exact #975 base, six changed files, Draft and mergeable. This documentation-only checkpoint triggers the same path-filtered validation again; the runs above validate the code HEAD before this note.
+
+### Original candidate identity
+
+- Candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; main and #976 Git blob both `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- 19 ordered features, 20×2 weights, 3,799 training rows.
+- `active_lambda=0`; `shadow_lambda=1` research-only.
+- Historical stability gate FAILED; prospective target-outcome gate CLOSED at **0/30**.
+
+### Fresh read-only pre-match odds ledger
+
+The only database query was an aggregate over `public.odds_snapshots` timestamp/fixture-identity fields; no scores, results, settlement or protected outcomes were selected.
+
+- Total: **3,966 rows**.
+- Strict pre-match: **3,915 rows / 327 events**, requiring `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`.
+- Missing clock fields: **0**; persistence-before-snapshot rows: **0**.
+- Rows with snapshot and persistence at/after kickoff: **51** (excluded).
+- Future events with a strict pre-match quote: **0**.
+- Latest strict pre-match snapshot: `2026-10-13 14:48:53.042620 UTC`.
+
+### Fresh main runtime evidence and unresolved root hold
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`, repository visibility **public**.
+- Latest observed main Original Forward run: [#45676816331](https://github.com/MaksimBlud/football-ai/actions/runs/45676816331), 2026-11-25 18:36 UTC. It passed **71 tests**, authenticated source artifact #15045735754 from source run #45661222160, verified **10 historical CSVs / 3,800 historical rows** and source ZIP SHA, then reported `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, `paid_provider_calls=0`, `supabase_writes=0`.
+- Source artifact #15045735754 is still a public GitHub Actions artifact (425,066 bytes; SHA-256 `b5eb1a3c17de5fc06c9bbbc270193f946fd0b285643d36750e397124372b8bc1`). It was not downloaded or reused in this audit because provider rights remain HOLD.
+- Among the **59** main-branch Actions runs created on 2026-11-26, no `Serie A V2 Original Forward-Only Preview` run was present.
+- Main `.github/workflows/serie-a-v2-forward-preview.yml` still has the daily schedule, job-level Supabase/GitHub credentials, mutable action refs and `if: always()` artifact publication. Root default-deny [#781](https://github.com/MaksimBlud/football-ai/pull/781) is OPEN / Ready / unmerged; private-storage [#879](https://github.com/MaksimBlud/football-ai/pull/879) and the source-first/frozen chain remain HUMAN-MERGE only. Do not dispatch the main workflow or enable live access.
+
+No provider permission was granted. Football-Data AI-training rights remain denied; Big Balls remains HOLD pending written upstream field rights and completeness. No provider/API request, source download, odds read, Supabase write/DDL, protected-outcome read, model refit, weight/feature change, production `.pkl` change, main update, merge, promotion, bet, schedule change or other-agent change occurred. Draft / HUMAN-MERGE only.
+
 ## 2026-11-26 12:07 UTC — pin source-first validation to official Node 24 releases
 
 A fresh upstream release-ref audit found that the source-first validation workflow inherited signed commits from the upstream `releases-v6` branches, but its pins did not resolve directly to official release tags. The workflow now uses the exact official release commits:
