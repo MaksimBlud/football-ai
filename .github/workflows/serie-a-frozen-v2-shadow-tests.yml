@@ -30,6 +30,16 @@ on:
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
 
+  push:
+    branches:
+      - research/v2-5dollar-prequote-adapter-20261112-run11
+    paths:
+      - "research/source_rights/5dollarfootballapi_openapi_recheck_20261126.json"
+      - "research/source_rights/5dollarfootballapi.json"
+      - "serie_a_v2_5dollar_source_adapter.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
+      - ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
+
 permissions:
   contents: read
 
