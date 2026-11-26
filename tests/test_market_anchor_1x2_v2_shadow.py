@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -192,3 +193,74 @@ def test_v2_code_does_not_reference_production_pickle_paths():
     assert "football_model_xgboost_elo.pkl" not in text
     assert "joblib.dump" not in text
     assert "--production" not in text
+
+
+
+def _git_blob_sha1(path: Path) -> str:
+    raw = path.read_bytes()
+    header = f"blob {len(raw)}\\0".encode("ascii")
+    return hashlib.sha1(header + raw).hexdigest()
+
+
+def test_v2_stability_gate_is_explicitly_attributed_to_pinned_v1_evidence():
+    protocol = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v2_protocol.json").read_text()
+    )
+    v1_report_path = ROOT / "experiments/market_anchor_1x2_v1_report.json"
+    v1_robustness_path = ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json"
+    v1_report = json.loads(v1_report_path.read_text())
+    v1_robustness = json.loads(v1_robustness_path.read_text())
+    candidate = json.loads(
+        (ROOT / "research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text()
+    )
+
+    provenance = protocol["provenance"]
+    assert provenance["source_experiment"] == "MARKET_ANCHOR_1X2_V1"
+    assert provenance["source_report_blob_sha"] == _git_blob_sha1(v1_report_path)
+    assert provenance["source_robustness_report_blob_sha"] == _git_blob_sha1(v1_robustness_path)
+    assert provenance["source_robustness_report_blob_sha"] == v2.SOURCE_ROBUSTNESS_REPORT_BLOB_SHA
+
+    assert v1_report["experiment_id"] == provenance["source_experiment"]
+    assert v1_robustness["experiment_id"] == "MARKET_ANCHOR_1X2_V1_ROBUSTNESS"
+    assert protocol["stability_gate"]["evaluation_source"] == v1_robustness["experiment_id"]
+    assert protocol["stability_gate"]["evaluation_source"] != protocol["experiment_id"]
+    assert candidate["source_experiment_id"] == provenance["source_experiment"]
+
+    observed = protocol["stability_gate"]["observed"]
+    assert observed["prior_seasons"] == v1_robustness["retrospective_prior_seasons"] == 6
+    assert observed["prior_dual_metric_wins"] == v1_robustness["retrospective_prior_season_dual_wins"] == 2
+    assert observed["brier_bootstrap_ci95_high"] == v1_robustness["final_oot_brier_bootstrap"]["bootstrap_ci95_high"]
+    assert observed["log_loss_bootstrap_ci95_high"] == v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_ci95_high"]
+    assert observed["brier_bootstrap_probability_better_than_market"] == v1_robustness["final_oot_brier_bootstrap"]["bootstrap_probability_better_than_market"]
+    assert observed["log_loss_bootstrap_probability_better_than_market"] == v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_probability_better_than_market"]
+
+    assert candidate["artifact_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    assert candidate["features"] == list(v2.FEATURE_SETS["ALL_FOOTBALL"])
+    assert len(candidate["features"]) == 19
+    assert len(candidate["weights"]) == 20
+    assert all(len(row) == 2 for row in candidate["weights"])
+    assert candidate["training_rows"] == 3799
+    assert candidate["active_lambda"] == protocol["candidate_recipe"]["active_lambda"] == 0.0
+    assert candidate["shadow_residual_lambda"] == protocol["candidate_recipe"]["shadow_residual_lambda"] == 1.0
+    assert candidate["stability_gate_passed"] is False
+    assert protocol["stability_gate"]["passed"] is False
+
+
+def test_v1_inherited_stability_evidence_does_not_claim_v2_out_of_sample_quality():
+    protocol = json.loads((ROOT / "experiments/market_anchor_1x2_v2_protocol.json").read_text())
+    v1_robustness = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+
+    gate = v2.stability_gate(v1_robustness)
+    assert gate["passed"] is False
+    assert v1_robustness["final_oot_season"] == "2025-2026"
+    assert v1_robustness["final_oot_n"] == 380
+    assert v1_robustness["final_oot_brier_bootstrap"]["bootstrap_probability_better_than_market"] == 0.6831
+    assert v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_probability_better_than_market"] == 0.6317
+    assert v1_robustness["final_oot_brier_bootstrap"]["bootstrap_ci95_high"] > 0.0
+    assert v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_ci95_high"] > 0.0
+    assert v1_robustness["retrospective_prior_season_dual_wins"] == 2
+    assert protocol["stability_gate"]["evaluation_source"] == "MARKET_ANCHOR_1X2_V1_ROBUSTNESS"
+    assert protocol["decision_policy"]["result"] == "NO_BET"
+    assert protocol["decision_policy"]["automatic_promotion"] is False
