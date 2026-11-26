@@ -62,3 +62,9 @@ def test_recovery_workflow_keeps_candidate_rebuild_default_denied_and_all_action
     archive_start = workflow.index("      - name: Archive recovered frozen V2 research candidate")
     archive_block = workflow[archive_start:]
     assert "if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}" in archive_block
+
+
+def test_continuity_updates_trigger_frozen_shadow_validation():
+    workflow = SHADOW.read_text(encoding="utf-8")
+    pull_request_paths = workflow.split("  pull_request:", 1)[1].split("\npermissions:", 1)[0]
+    assert '"PROJECT_CONTINUITY.md"' in pull_request_paths
