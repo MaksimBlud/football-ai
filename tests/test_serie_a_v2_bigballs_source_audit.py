@@ -45,6 +45,9 @@ def test_provider_terms_are_promising_but_do_not_authorize_public_raw_redistribu
     assert terms["raw_field_republication_permitted"] is False
     assert terms["upstream_provider_identity_and_field_level_rights_independently_verified"] is False
     assert terms["retention_after_account_closure_explicitly_defined"] is False
+    assert terms["public_licence_notice_names_football_data_org"] is True
+    assert terms["upstream_field_level_rights_independently_verified"] is False
+    assert terms["upstream_sublicensing_authority_independently_verified"] is False
 
 
 def test_match_statistics_endpoint_entitlement_conflict_remains_hold():
@@ -187,3 +190,30 @@ def test_provider_plan_conflict_and_rights_manifest_pin_are_explicitly_recorded(
     assert audit["endpoint_plan_observations"]["resolution"] == "CONFLICTING_OFFICIAL_DOCUMENTATION"
     assert audit["security_controls"]["canonical_rights_manifest_pinned_by_git_blob_sha1"] is True
     assert audit["security_controls"]["caller_supplied_rights_mapping_accepted"] is False
+
+
+def test_2026_11_26_official_recheck_preserves_provider_hold_and_current_plan_conflicts():
+    audit = load_audit()
+    free = audit["free_plan"]
+    coverage = audit["coverage"]
+    provenance = audit["provenance"]
+    assert free["free_plan_one_selected_sport_at_a_time"] is True
+    assert free["free_plan_sport_scope_required_for_new_keys_since"] == "2026-11-24"
+    assert free["free_plan_daily_request_limit"] == 1000
+    assert free["free_plan_per_minute_limit"] == 100
+    assert free["pricing_page_season_scope"] == "CURRENT_PLUS_MOST_RECENT"
+    assert free["serie_a_page_season_scope"] == "CURRENT_ONLY"
+    assert free["season_depth_status"] == "CONFLICTING_FIRST_PARTY_PRICING_AND_SERIE_A_PAGE"
+    assert free["serie_a_page_statistics_matrix_min_plan"] == "edge"
+    assert free["serie_a_page_statistics_faq_min_plan"] == "free"
+    assert free["openapi_statistics_operation_min_plan"] == "free"
+    assert free["endpoint_plan_conflict"] is True
+    assert coverage["serie_a_page_current_season"] == "2026-27"
+    assert coverage["current_2026_27_match_level_coverage"] == "UNKNOWN"
+    assert coverage["field_level_corner_yellow_red_card_coverage"] == "UNKNOWN"
+    assert provenance["post_match_corrections_possible"] is True
+    assert provenance["per_match_first_observed_timestamp_semantics_documented"] is False
+    assert audit["decision"] == "HOLD_NO_INTEGRATION"
+    assert audit["integration_allowed"] is False
+    assert audit["automated_capture_authorized"] is False
+    assert audit["frozen_inference_authorized"] is False
