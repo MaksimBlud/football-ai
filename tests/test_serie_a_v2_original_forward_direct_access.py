@@ -6,6 +6,7 @@ import pytest
 import market_anchor_v2_artifact_privacy as privacy
 import market_anchor_v2_direct_access as direct_access
 import market_anchor_v2_source_rights as source_rights
+import market_anchor_v2_source_capture_rights as source_capture_rights
 import serie_a_v2_forward_capture as original_forward
 
 
@@ -64,6 +65,7 @@ def test_direct_access_checks_private_storage_after_rights_are_granted(monkeypat
 
 def test_original_forward_public_entrypoints_deny_before_inputs_or_callbacks(monkeypatch, tmp_path):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setattr(source_capture_rights, "require_personal_research_source_capture_scope", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(source_rights, "require_personal_research_inference_scope", _deny)
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _forbidden)
     blocked_dir = tmp_path / "must-not-be-created"
@@ -93,6 +95,7 @@ def test_original_forward_public_entrypoints_deny_before_inputs_or_callbacks(mon
 
 def test_original_forward_github_boundaries_deny_before_network_or_input_access(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setattr(source_capture_rights, "require_personal_research_source_capture_scope", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(source_rights, "require_personal_research_inference_scope", _deny)
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _forbidden)
 
