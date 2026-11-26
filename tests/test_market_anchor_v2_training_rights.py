@@ -26,6 +26,9 @@ def _write_grant(
     evidence = tmp_path / "provider-permission.txt"
     body = b"synthetic provider-issued AI training permission; tests only"
     evidence.write_bytes(body)
+    fair_use_evidence = tmp_path / "football_data_contact_fair_use_synthetic.md"
+    fair_use_body = b"synthetic fair-use policy evidence for tests only"
+    fair_use_evidence.write_bytes(fair_use_body)
     manifest = {
         "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
         "provider": "Football-Data.co.uk",
@@ -34,6 +37,12 @@ def _write_grant(
         "research_use_permitted": True,
         "commercial_use_permitted": False,
         "policy_page_updated_date": policy_page_updated_date,
+        "fair_use_policy_url": "https://football-data.co.uk/contact.php",
+        "fair_use_policy_checked_at_utc": "2026-11-19T22:00:00Z",
+        "fair_use_policy_page_updated_date": "2026-11-19",
+        "fair_use_policy_evidence_file": fair_use_evidence.name,
+        "fair_use_policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES",
+        "fair_use_policy_evidence_sha256": hashlib.sha256(fair_use_body).hexdigest(),
         "authorization": {
             "provider_issued": provider_issued,
             "kind": "written_permission",
