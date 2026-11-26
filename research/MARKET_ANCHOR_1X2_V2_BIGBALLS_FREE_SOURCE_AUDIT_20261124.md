@@ -162,3 +162,28 @@ This is not a resolved entitlement. The audit manifest now records the exact con
 The offline archive gate also had a caller-controlled rights-mapping weakness: a caller could pass a synthetic mapping with all approval booleans set to true even while the canonical repository manifest said HOLD. The gate now loads the canonical manifest itself, verifies its exact Git blob SHA-1, and rejects any decision other than `APPROVED`. The public validator no longer accepts caller-supplied rights flags. Synthetic positive-path tests patch only the internal manifest loader; the actual canonical manifest remains HOLD and is tested to fail closed. A future rights approval must change the manifest and its pinned blob SHA in a separately reviewed PR.
 
 No provider account/key, API request, download, raw archive, odds endpoint, Supabase access/write/DDL, protected outcome read, feature calculation, inference, model refit, production `.pkl` change, schedule change or merge occurred.
+
+
+## Superseding first-party terms, pricing and coverage recheck — 2026-11-26
+
+The official pages were re-read on 2026-11-26. This updates the evidence, not the authorization decision.
+
+### What is now clearer
+
+- The current [Terms of Service](https://bigballsdata.com/legal/terms), effective 2026-08-10, explicitly permit storing API responses in the user's own systems and using stored responses as inputs to internal models, including training, evaluation and backtesting. Derived outputs may be published/sold. Raw-feed resale and republishing raw field values remain prohibited.
+- The [global pricing page](https://bigballsdata.com/pricing) states Free is one selected sport at a time, 1,000 requests/day and 100/minute, with scores, standings and statistics. Its Free-plan bullet says current plus most-recent season.
+- The [changelog](https://bigballsdata.com/whats-new) says new Free keys require a declared sport scope from 2026-11-24. A football-only scope would be sufficient for this project, but no account or key was created.
+- The [Serie A page](https://bigballsdata.com/serie-a-api) displays the 2026-27 season and a standings source timestamp of 2026-11-19 05:12 UTC. It also explicitly says Free covers the current season only.
+- The public [licence notices](https://bigballsdata.com/attribution) identify Football-Data.org as a football-data source at a high level. They do not map individual required fields to upstream licensors or prove field-level sublicensing authority.
+
+### Why the source remains HOLD
+
+1. The Serie A capability matrix labels `GET /v1/matches/{id}/statistics` Edge-only, while the same page FAQ, the [OpenAPI](https://bigballsdata.com/openapi.json), and the [soccer endpoint guide](https://bigballsdata.com/soccer-api) describe the route as Free (with expected-goals fields restricted). The direct first-party contradiction is still unresolved; no Free entitlement is assumed.
+2. Global pricing says current plus most-recent season, while the dedicated Serie A page says current season only. The 2026-27 current season is visible, but the prior-season scope is not safe to assume.
+3. The page's aggregate historical team-stat coverage is not a 2026-27 per-fixture, per-field completeness matrix for corners, yellow cards and red cards. Exact 19-feature parity remains unverified.
+4. The provider states that completed match/player rows can be corrected after full time and advises retaining the latest source date. It does not define per-match first-observation or per-field correction timestamps. A local receipt time and SHA can prove project possession before a quote, not upstream first observation.
+5. Provider-level storage/internal-model rights are promising, but upstream rights for each required field, account-closure retention, and raw private storage remain unresolved. The attribution notice alone is not a field-level license.
+
+The canonical rights manifest remains `HOLD_NO_INTEGRATION`; `integration_allowed`, `automated_capture_authorized` and `frozen_inference_authorized` remain false. No account/key, provider API request, source download, odds request, Supabase access/write/DDL, feature calculation, inference or protected outcome read occurred. The offline archive gate remains synthetic-only and fails closed against the canonical HOLD manifest.
+
+**Decision:** Big Balls is the strongest documented free candidate reviewed so far for current-season lagged source statistics, but it is not cleared for capture or inference. Obtain written clarification of the Free statistics endpoint, season scope, field-level upstream rights and timestamp/correction semantics; only then may a separate owner-approved private capture be considered.
