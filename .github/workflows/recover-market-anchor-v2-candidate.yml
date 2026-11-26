@@ -8,6 +8,7 @@ on:
     paths:
       - "market_anchor_v2_saved_cohort_replay.py"
       - "tests/test_market_anchor_v2_saved_cohort_replay.py"
+      - "tests/test_market_anchor_1x2_v2_shadow_workflow_security.py"
       - "experiments/market_anchor_v2_saved_cohort_replay_report.json"
       - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
       - "research/MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY.md"
@@ -44,7 +45,7 @@ jobs:
       - name: Run offline original V2 feature and frozen-candidate regressions
         run: |
           python -m py_compile serie_a_v2_frozen_shadow_preview.py serie_a_v2_asof_feature_manifest.py
-          python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_workflow_external_access_hold.py
+          python -m pytest -q tests/test_serie_a_v2_frozen_shadow_preview.py tests/test_serie_a_v2_asof_feature_manifest.py tests/test_serie_a_v2_workflow_external_access_hold.py tests/test_market_anchor_1x2_v2_shadow_workflow_security.py
       - name: Restore exact Sep-2026 model code from frozen Git commit
         shell: bash
         run: |
