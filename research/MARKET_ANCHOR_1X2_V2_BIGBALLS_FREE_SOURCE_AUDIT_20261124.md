@@ -1,6 +1,7 @@
 # Big Balls Sports Data — Free Serie A source audit for original MARKET_ANCHOR_1X2_V2
 
-**Reviewed:** 2026-11-24 12:52 UTC  
+**Original review:** 2026-11-24 12:52 UTC  
+**Superseding official-source recheck:** 2026-11-26 12:49 UTC  
 **Provider:** [Big Balls Sports Data](https://bigballsdata.com/)  
 **Decision:** **HOLD — candidate only; no account, API key, request, download, integration, feature calculation or inference.**
 
@@ -172,7 +173,7 @@ The official pages were re-read on 2026-11-26. This updates the evidence, not th
 
 - The current [Terms of Service](https://bigballsdata.com/legal/terms), effective 2026-08-10, explicitly permit storing API responses in the user's own systems and using stored responses as inputs to internal models, including training, evaluation and backtesting. Derived outputs may be published/sold. Raw-feed resale and republishing raw field values remain prohibited.
 - The [global pricing page](https://bigballsdata.com/pricing) states Free is one selected sport at a time, 1,000 requests/day and 100/minute, with scores, standings and statistics. Its Free-plan bullet says current plus most-recent season.
-- The [changelog](https://bigballsdata.com/whats-new) says new Free keys require a declared sport scope from 2026-11-24. A football-only scope would be sufficient for this project, but no account or key was created.
+- The [changelog](https://bigballsdata.com/whats-new) dates required sport selection for new Free keys to 2026-10-26 and says existing Free keys had a grace period through 2026-11-24. A football-only scope would be sufficient for this project, but no account or key was created.
 - The [Serie A page](https://bigballsdata.com/serie-a-api) displays the 2026-27 season and a standings source timestamp of 2026-11-19 05:12 UTC. It also explicitly says Free covers the current season only.
 - The public [licence notices](https://bigballsdata.com/attribution) identify Football-Data.org as a football-data source at a high level. They do not map individual required fields to upstream licensors or prove field-level sublicensing authority.
 
@@ -187,3 +188,41 @@ The official pages were re-read on 2026-11-26. This updates the evidence, not th
 The canonical rights manifest remains `HOLD_NO_INTEGRATION`; `integration_allowed`, `automated_capture_authorized` and `frozen_inference_authorized` remain false. No account/key, provider API request, source download, odds request, Supabase access/write/DDL, feature calculation, inference or protected outcome read occurred. The offline archive gate remains synthetic-only and fails closed against the canonical HOLD manifest.
 
 **Decision:** Big Balls is the strongest documented free candidate reviewed so far for current-season lagged source statistics, but it is not cleared for capture or inference. Obtain written clarification of the Free statistics endpoint, season scope, field-level upstream rights and timestamp/correction semantics; only then may a separate owner-approved private capture be considered.
+
+
+## Superseding official-plan scope correction — 2026-11-26 12:49 UTC
+
+The first-party pages and changelog were re-read on 2026-11-26. This corrects two details in the earlier 08:55 UTC manifest review; it does **not** change the HOLD decision.
+
+### Free sport scope dates
+
+The current [changelog](https://bigballsdata.com/whats-new) distinguishes two dates:
+
+- **2026-10-26:** new Free API keys require a sport selection at signup.
+- **2026-11-24:** the grace period for existing Free keys to retain all-sports access ended.
+
+The Free plan is one selected sport at a time. A single football scope is sufficient for this Serie A-only research candidate. No account or key was created.
+
+### Season-depth wording
+
+The current [global pricing page](https://bigballsdata.com/pricing) is internally inconsistent: its plan introduction says Free covers the current season, while the Free-plan bullet says current plus most-recent season. The [soccer hub](https://bigballsdata.com/soccer-api) and [dedicated Serie A page](https://bigballsdata.com/serie-a-api) both state that Free covers the current season only. The manifest now records all four statements separately and does not assume access to any prior season.
+
+### Match-statistics endpoint entitlement
+
+The endpoint conflict remains:
+
+- Current [OpenAPI](https://bigballsdata.com/openapi.json) declares `x-bbs-min-plan: free` for `GET /v1/matches/{id}/statistics`, with `expected_goals` separately marked Solo+.
+- The soccer hub FAQ and Serie A FAQ say the route is Free, and the changelog says this endpoint moved to Free on 2026-11-11.
+- The dedicated Serie A capability matrix still places advanced match statistics (including cards) at Edge.
+
+The endpoint remains **unresolved**. No Free entitlement is assumed until the provider reconciles its own plan matrix with its OpenAPI/FAQ statements.
+
+### Rights, freshness and V2 implications
+
+The [Terms of Service](https://bigballsdata.com/legal/terms) still permit private API-response storage and internal model training/evaluation/backtesting while prohibiting raw-feed resale and raw-field republication. The [licence notice](https://bigballsdata.com/attribution) names Football-Data.org for football data but does not map corners, yellow cards and red cards individually to upstream rights or establish sublicensing authority.
+
+The Serie A page still shows a 2026-27 standings source timestamp of 2026-11-19 05:12 UTC. This is not a per-fixture completeness report for the 19 frozen V2 features. The statistics endpoint is stored-only, post-match, hourly persisted, and generally becomes available around 30 minutes after full time; it is a possible lagged input for a later fixture, not a live pre-kickoff statistic for the same fixture.
+
+The canonical manifest was corrected to record the 2026-10-26 sport-selection date and 2026-11-24 existing-key grace end. Its exact Git blob SHA is repinned in the offline archive gate. The manifest remains `HOLD_NO_INTEGRATION`; automated capture, frozen inference and integration remain false.
+
+No provider account/key, API request, source download, odds request, Supabase access/write/DDL, protected outcome read, feature calculation, inference, refit, production `.pkl` change, schedule change or merge occurred.
