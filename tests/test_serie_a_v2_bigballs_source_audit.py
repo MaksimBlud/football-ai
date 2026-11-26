@@ -209,7 +209,10 @@ def test_2026_11_26_official_recheck_preserves_provider_hold_and_current_plan_co
     assert free["free_plan_per_minute_limit"] == 100
     assert free["pricing_page_season_scope"] == "CURRENT_PLUS_MOST_RECENT"
     assert free["serie_a_page_season_scope"] == "CURRENT_ONLY"
-    assert free["season_depth_status"] == "CONFLICTING_FIRST_PARTY_PRICING_AND_SERIE_A_PAGE"
+    assert free["season_depth_status"] == "CONFLICTING_GLOBAL_PRICING_BULLET_VS_SUMMARY_AND_SOCCER_SERIE_A_AUTHORITY_PAGES"
+    assert free["global_pricing_summary_season_scope"] == "CURRENT_ONLY"
+    assert free["global_pricing_free_bullet_season_scope"] == "CURRENT_PLUS_MOST_RECENT"
+    assert free["soccer_hub_season_scope"] == "CURRENT_ONLY"
     assert free["serie_a_page_statistics_matrix_min_plan"] == "edge"
     assert free["serie_a_page_statistics_faq_min_plan"] == "free"
     assert free["openapi_statistics_operation_min_plan"] == "free"
