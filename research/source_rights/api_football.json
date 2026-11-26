@@ -1,0 +1,85 @@
+{
+  "schema_version": "MARKET_ANCHOR_V2_SOURCE_RIGHTS_AUDIT_V1",
+  "provider": "API-FOOTBALL",
+  "audit_date": "2026-11-26",
+  "decision": "HOLD",
+  "scope": "official public documentation only",
+  "free_plan": {
+    "price_usd_per_month": 0,
+    "requests_per_day": 100,
+    "statistics_endpoint_listed": true,
+    "all_endpoint_families_listed": true,
+    "season_availability_limited": true,
+    "covered_seasons_last_confirmed": [2022, 2023, 2024],
+    "season_window_evidence_date": "2026-10-26",
+    "current_2026_27_available": false,
+    "exact_serie_a_2026_27_statistics_coverage_verified": false,
+    "historical_2016_2026_coverage_verified": false,
+    "coverage_page_last_updated": "2026-11-26",
+    "coverage_page_lists_italy_serie_a": true,
+    "authenticated_coverage_response_obtained": false
+  },
+  "candidate_feature_mapping": {
+    "result_points_goals_9": "fixture result/score and standings fields are documented",
+    "corners_6": "Corner Kicks is documented in fixture statistics",
+    "yellow_cards_2": "Yellow Cards is documented in fixture statistics",
+    "red_cards_2": "Red Cards is documented in fixture statistics",
+    "exact_original_19_feature_parity_verified": false,
+    "per_match_completeness_verified": false,
+    "null_is_distinct_from_zero": true
+  },
+  "rights": {
+    "data_obtained_from_partners": true,
+    "resale_prohibited": true,
+    "third_party_rights_may_apply": true,
+    "explicit_internal_ml_training_permission": false,
+    "explicit_model_inference_permission": false,
+    "explicit_private_raw_response_retention_permission": false,
+    "upstream_field_rights_identified": false,
+    "written_provider_clearance_obtained": false,
+    "terms_last_updated": "2025-05-21"
+  },
+  "provenance": {
+    "statistics_available_for_ongoing_or_completed_fixture": true,
+    "statistics_available_for_target_fixture_before_kickoff": false,
+    "per_match_first_observation_time_documented": false,
+    "per_field_correction_time_documented": false,
+    "project_receipt_time_and_sha256_capture_possible_if_authorized": true,
+    "source_before_quote_evidence_exists": false
+  },
+  "original_v2": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "weight_matrix_shape": [20, 2],
+    "active_lambda": 0.0,
+    "shadow_residual_lambda": 1.0,
+    "stability_gate_passed": false,
+    "automatic_promotion": false
+  },
+  "non_actions": {
+    "account_created": false,
+    "api_key_requested": false,
+    "api_requests": 0,
+    "paid_provider_calls": 0,
+    "odds_requests": 0,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "protected_2026_27_outcomes_read": false,
+    "feature_calculation": false,
+    "inference": false,
+    "training_or_refit": false,
+    "production_pickle_changes": false,
+    "schedule_changes": false,
+    "integration_authorized": false
+  },
+  "official_sources": {
+    "terms": "https://www.api-football.com/terms",
+    "pricing": "https://www.api-football.com/pricing/",
+    "documentation": "https://www.api-football.com/documentation-v3",
+    "coverage": "https://www.api-football.com/coverage/",
+    "free_plan_guide": "https://www.api-football.com/news/post/how-to-get-started-with-api-football-the-complete-beginners-guide",
+    "free_season_window_guide": "https://www.api-football.com/news/post/how-to-get-all-data-from-a-league-with-api-football"
+  }
+}
