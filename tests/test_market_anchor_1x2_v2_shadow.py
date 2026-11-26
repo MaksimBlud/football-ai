@@ -12,6 +12,18 @@ import market_anchor_1x2_v2_shadow as v2
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.fixture(autouse=True)
+def allow_synthetic_v2_inference_scope(monkeypatch):
+    """Offline fixtures use synthetic inputs; this is not provider authorization."""
+    import market_anchor_v2_direct_access as access
+
+    monkeypatch.setattr(
+        access,
+        "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+
 def _source_provenance(
     day="2026-09-18",
     *,
@@ -44,21 +56,11 @@ def _source_provenance(
 
 
 def _artifact():
-    features = list(v2.FEATURE_SETS[v2.FEATURE_VARIANT])
-    body = {
-        **v2.candidate_recipe(),
-        "training_rows": 100,
-        "training_fingerprint_sha256": "a" * 64,
-        "imputer_medians": [0.0] * len(features),
-        "scaler_mean": [0.0] * len(features),
-        "scaler_scale": [1.0] * len(features),
-        "weights": [[0.0, 0.0] for _ in range(len(features) + 1)],
-    }
-    body["artifact_sha256"] = v2._sha256_json(body)
-    return body
-
-
-
+    return json.loads(
+        (ROOT / "research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text(
+            encoding="utf-8"
+        )
+    )
 def test_candidate_artifact_rejects_coercible_non_numeric_types():
     cases = [
         ("training_rows", True),
@@ -172,42 +174,67 @@ def test_frozen_v1_robustness_fails_the_predeclared_stability_gate():
     assert protocol["provenance"]["source_robustness_report_blob_sha"] == v2.SOURCE_ROBUSTNESS_REPORT_BLOB_SHA
 
 
-def test_candidate_recipe_refits_only_pre_2026_27_history():
+def test_candidate_recipe_is_frozen_and_refit_writer_paths_are_disabled(tmp_path):
     recipe = v2.candidate_recipe()
     assert recipe["primary_league"] == "SERIE_A"
     assert recipe["feature_variant"] == "ALL_FOOTBALL"
-    assert recipe["shadow_residual_lambda"] == 1.0
     assert recipe["active_lambda"] == 0.0
-    assert recipe["stability_gate_passed"] is False
-    assert recipe["l2_penalty"] == 1.0
-    assert recipe["refit_seasons"][-1] == "2025-2026"
-    assert "2026-2027" not in recipe["refit_seasons"]
-    assert recipe["opened_2026_27_outcomes_used"] is False
+    assert recipe["shadow_residual_lambda"] == 1.0
     assert len(recipe["features"]) == 19
 
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"training input inspected despite frozen-candidate block: {name}")
 
-def test_active_candidate_is_exact_market_even_when_shadow_residual_moves():
+    output = tmp_path / "must-not-be-created" / "candidate.json"
+    with pytest.raises(PermissionError, match="candidate is frozen; refitting is disabled"):
+        v2.fit_candidate_artifact(Untouchable())
+    with pytest.raises(PermissionError, match="candidate is frozen; writing a refit artifact is disabled"):
+        v2.write_candidate_artifact(Untouchable(), output)
+    assert not output.exists()
+def test_active_candidate_is_exact_market_even_when_original_shadow_residual_moves():
     artifact = _artifact()
-    artifact["weights"][0] = [0.35, -0.20]
-    body = dict(artifact)
-    body.pop("artifact_sha256")
-    artifact["artifact_sha256"] = v2._sha256_json(body)
     v2.validate_candidate_artifact(artifact)
 
-    market = np.array([[0.50, 0.25, 0.25], [0.30, 0.30, 0.40]])
-    features = pd.DataFrame(np.zeros((2, 19)), columns=artifact["features"])
+    market = np.array([[0.50, 0.25, 0.25]])
+    features = pd.DataFrame([artifact["imputer_medians"]], columns=artifact["features"])
     active = v2.predict_candidate(market, features, artifact)
     shadow = v2.predict_shadow_residual(market, features, artifact)
 
     np.testing.assert_allclose(active, market, atol=1e-12)
     assert not np.allclose(shadow, market, atol=1e-12)
 
-    broken = dict(artifact)
-    broken["active_lambda"] = 1.0
-    with pytest.raises(ValueError, match="frozen recipe"):
-        v2.validate_candidate_artifact(broken)
+
+def test_candidate_validator_rejects_rehashed_nonoriginal_weights():
+    artifact = _artifact()
+    tampered = json.loads(json.dumps(artifact))
+    tampered["weights"][0][0] += 0.01
+    body = dict(tampered)
+    body.pop("artifact_sha256")
+    tampered["artifact_sha256"] = v2._sha256_json(body)
+
+    with pytest.raises(ValueError, match="frozen original V2 SHA-256"):
+        v2.validate_candidate_artifact(tampered)
 
 
+def test_direct_inference_requires_rights_before_touching_inputs(monkeypatch):
+    import market_anchor_v2_direct_access as access
+
+    def deny():
+        raise PermissionError("synthetic inference scope denied")
+
+    monkeypatch.setattr(access, "require_v2_inference_access", deny)
+
+    class Untouchable:
+        def __getattribute__(self, name):
+            raise AssertionError(f"inference input inspected before rights check: {name}")
+
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
+        v2._artifact_residual_logits(Untouchable(), Untouchable())
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
+        v2.predict_shadow_residual(Untouchable(), Untouchable(), Untouchable())
+    with pytest.raises(PermissionError, match="synthetic inference scope denied"):
+        v2.predict_candidate(Untouchable(), Untouchable(), Untouchable())
 def test_shadow_capture_accepts_only_pre_kickoff_outcome_free_serie_a_rows():
     assert v2.validate_shadow_capture_rows([_row()])[0]["event_id"] == "evt-1"
 
@@ -1042,3 +1069,71 @@ def test_forward_source_provenance_writer_output_passes_frozen_gate_validator():
     ])
     assert validated[0]["source_provenance"] == provenance
 
+def _git_blob_sha1(path: Path) -> str:
+    raw = path.read_bytes()
+    header = f"blob {len(raw)}\0".encode("ascii")
+    return hashlib.sha1(header + raw).hexdigest()
+
+
+def test_v2_stability_gate_is_explicitly_attributed_to_pinned_v1_evidence():
+    protocol = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v2_protocol.json").read_text()
+    )
+    v1_report_path = ROOT / "experiments/market_anchor_1x2_v1_report.json"
+    v1_robustness_path = ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json"
+    v1_report = json.loads(v1_report_path.read_text())
+    v1_robustness = json.loads(v1_robustness_path.read_text())
+    candidate = json.loads(
+        (ROOT / "research/models/market_anchor_v2_serie_a_frozen_candidate.json").read_text()
+    )
+
+    provenance = protocol["provenance"]
+    assert provenance["source_experiment"] == "MARKET_ANCHOR_1X2_V1"
+    assert provenance["source_report_blob_sha"] == _git_blob_sha1(v1_report_path)
+    assert provenance["source_robustness_report_blob_sha"] == _git_blob_sha1(v1_robustness_path)
+    assert provenance["source_robustness_report_blob_sha"] == v2.SOURCE_ROBUSTNESS_REPORT_BLOB_SHA
+
+    assert v1_report["experiment_id"] == provenance["source_experiment"]
+    assert v1_robustness["experiment_id"] == "MARKET_ANCHOR_1X2_V1_ROBUSTNESS"
+    assert protocol["stability_gate"]["evaluation_source"] == v1_robustness["experiment_id"]
+    assert protocol["stability_gate"]["evaluation_source"] != protocol["experiment_id"]
+    assert candidate["source_experiment_id"] == provenance["source_experiment"]
+
+    observed = protocol["stability_gate"]["observed"]
+    assert observed["prior_seasons"] == v1_robustness["retrospective_prior_seasons"] == 6
+    assert observed["prior_season_dual_metric_wins"] == v1_robustness["retrospective_prior_season_dual_wins"] == 2
+    assert observed["brier_bootstrap_ci95_high"] == v1_robustness["final_oot_brier_bootstrap"]["bootstrap_ci95_high"]
+    assert observed["log_loss_bootstrap_ci95_high"] == v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_ci95_high"]
+    assert observed["brier_bootstrap_probability_better_than_market"] == v1_robustness["final_oot_brier_bootstrap"]["bootstrap_probability_better_than_market"]
+    assert observed["log_loss_bootstrap_probability_better_than_market"] == v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_probability_better_than_market"]
+
+    assert candidate["artifact_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    assert candidate["features"] == list(v2.FEATURE_SETS["ALL_FOOTBALL"])
+    assert len(candidate["features"]) == 19
+    assert len(candidate["weights"]) == 20
+    assert all(len(row) == 2 for row in candidate["weights"])
+    assert candidate["training_rows"] == 3799
+    assert candidate["active_lambda"] == protocol["candidate_recipe"]["active_lambda"] == 0.0
+    assert candidate["shadow_residual_lambda"] == protocol["candidate_recipe"]["shadow_residual_lambda"] == 1.0
+    assert candidate["stability_gate_passed"] is False
+    assert protocol["stability_gate"]["passed"] is False
+
+
+def test_v1_inherited_stability_evidence_does_not_claim_v2_out_of_sample_quality():
+    protocol = json.loads((ROOT / "experiments/market_anchor_1x2_v2_protocol.json").read_text())
+    v1_robustness = json.loads(
+        (ROOT / "experiments/market_anchor_1x2_v1_robustness_report.json").read_text()
+    )
+
+    gate = v2.stability_gate(v1_robustness)
+    assert gate["passed"] is False
+    assert v1_robustness["final_oot_season"] == "2025-2026"
+    assert v1_robustness["final_oot_n"] == 380
+    assert v1_robustness["final_oot_brier_bootstrap"]["bootstrap_probability_better_than_market"] == 0.6831
+    assert v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_probability_better_than_market"] == 0.6317
+    assert v1_robustness["final_oot_brier_bootstrap"]["bootstrap_ci95_high"] > 0.0
+    assert v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_ci95_high"] > 0.0
+    assert v1_robustness["retrospective_prior_season_dual_wins"] == 2
+    assert protocol["stability_gate"]["evaluation_source"] == "MARKET_ANCHOR_1X2_V1_ROBUSTNESS"
+    assert protocol["decision_policy"]["result"] == "NO_BET"
+    assert protocol["decision_policy"]["automatic_promotion"] is False
