@@ -7,6 +7,7 @@ on:
       - "experiments/market_anchor_1x2_v2_protocol.json"
       - "tests/test_market_anchor_1x2_v2_shadow.py"
       - "tests/test_market_anchor_1x2_v2_shadow_workflow_security.py"
+      - "PROJECT_CONTINUITY.md"
       - ".github/workflows/market-anchor-1x2-v2-shadow-validation.yml"
       - "market_anchor_1x2_v1.py"
       - "historical_football_signal_lab.py"
