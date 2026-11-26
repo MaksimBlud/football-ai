@@ -198,7 +198,7 @@ def test_v2_code_does_not_reference_production_pickle_paths():
 
 def _git_blob_sha1(path: Path) -> str:
     raw = path.read_bytes()
-    header = f"blob {len(raw)}\\0".encode("ascii")
+    header = f"blob {len(raw)}\0".encode("ascii")
     return hashlib.sha1(header + raw).hexdigest()
 
 
