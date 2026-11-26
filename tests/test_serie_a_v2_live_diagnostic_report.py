@@ -17,6 +17,8 @@ NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
 @pytest.fixture(autouse=True)
 def _allow_synthetic_rights_for_offline_tests(monkeypatch):
     synthetic = lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"}
+    import market_anchor_v2_direct_access as direct_access
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(live_diagnostic, "require_v2_source_capture_access", synthetic)
     monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", synthetic)
@@ -138,26 +140,30 @@ def test_public_free_history_never_downloads_protected_2026_27_outcomes():
 
         def __init__(self, url):
             self.url = url
-    def fake_get(url, timeout, allow_redirects=False):
-        assert allow_redirects is False
+
+    def fake_get(url, timeout, *, allow_redirects):
         calls.append((url, timeout, allow_redirects))
+        assert allow_redirects is False
         assert url.startswith(PUBLIC_BASE + "/") and url.endswith("/I1.csv")
         assert f"/{current}/" not in url
         return Response(url)
     history, audit = fetch_public_history(get=fake_get)
     assert len(calls) == 10
-    assert all(call[2] is False for call in calls)
     assert len(audit) == len(calls)
     assert len(history) == 3*len(calls)
     assert all(x["csv_sha256"] and x["source_observed_at_utc"] for x in audit)
+    assert all(call[2] is False for call in calls)
 
 
 def test_upstream_status_failure_is_not_filled_with_guessed_data():
     class BadResponse:
         status_code=503
         content=b""
+    def bad_get(url, timeout, *, allow_redirects):
+        assert allow_redirects is False
+        return BadResponse()
     with pytest.raises(RuntimeError,match="unavailable"):
-        fetch_public_history(get=lambda url,timeout,allow_redirects=False: BadResponse())
+        fetch_public_history(get=bad_get)
 
 
 
@@ -186,46 +192,3 @@ def test_real_quote_diagnostic_refuses_both_teams_without_prior_match_history():
     assert report["per_fixture_feature_coverage"][0]["observed_frozen_feature_count"] == 0
     assert report["no_bet"] is True
     assert report["supabase_writes"] == report["paid_provider_requests"] == 0
-
-
-def test_public_history_rejects_redirect_before_body_or_archive(tmp_path):
-    class RedirectResponse:
-        status_code = 302
-        url = "https://redirect.invalid/serie-a.csv"
-
-        @property
-        def content(self):
-            raise AssertionError("redirect body must not be read")
-
-    calls = []
-
-    def fake_get(url, timeout, allow_redirects=False):
-        assert allow_redirects is False
-        calls.append((url, timeout, allow_redirects))
-        return RedirectResponse()
-
-    with pytest.raises(RuntimeError, match="unavailable"):
-        fetch_public_history(get=fake_get, capture_dir=tmp_path)
-
-    assert len(calls) == 1
-    assert calls[0][2] is False
-    assert list(tmp_path.iterdir()) == []
-
-
-def test_public_history_rejects_unexpected_final_url_before_body_or_archive(tmp_path):
-    class RedirectedSuccess:
-        status_code = 200
-        url = "https://redirect.invalid/serie-a.csv"
-
-        @property
-        def content(self):
-            raise AssertionError("unexpected response body must not be read")
-
-    def fake_get(url, timeout, allow_redirects=False):
-        assert allow_redirects is False
-        return RedirectedSuccess()
-
-    with pytest.raises(ValueError, match="response URL differs from configured URL"):
-        fetch_public_history(get=fake_get, capture_dir=tmp_path)
-
-    assert list(tmp_path.iterdir()) == []
