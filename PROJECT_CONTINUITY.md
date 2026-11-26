@@ -1,5 +1,40 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 — Fresh main / exact-head V2 source-order and CI checkpoint
+
+This checkpoint supersedes the earlier 2026-11-26 SHA references in the preceding freeze-restack note. All work remains Original `MARKET_ANCHOR_1X2_V2` only.
+
+### Fresh main and the still-open runtime defect
+
+- The current main-based PR base SHA is `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is **public**.
+- Main `serie_a_v2_forward_capture.py` blob is `5db02cbd1367ed25b994b152acf371421859a014`. Its `main()` still imports `database.supabase` and calls `fetch_saved_upcoming_serie_a_quotes()` **before** `discover_archives()`, parent-run authentication, or ZIP SHA verification.
+- Main `.github/workflows/serie-a-v2-forward-preview.yml` blob is `48ce3b0d8e31c4cf293b94500e9c320047311467`. It still has cron `8 8 * * *`, job-level Supabase/GitHub credentials, mutable `upload-artifact@v4`, and an artifact upload step with `if: always()`; it has no workflow-level `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false` guard.
+- This is a real main-branch blocker, not a hypothetical test finding. Do not enable or manually dispatch this workflow while the root hold is not merged.
+
+### Verified correction on the pending V2 chain
+
+- PR #975 is currently based on provider-rights PR #958 exact HEAD `08947e00764e490bc489d6db2d47da3bc541aa81`; its current HEAD is `bf5446c2692b8a0e9955f685b88d353f24d486e6`.
+- On that #975 HEAD, `serie_a_v2_forward_capture.py` blob is `b87285a5bf1168206e70bd28a793e65c3380367b`. The CLI now requires explicit live/source/inference permissions and exact private-repository verification, authenticates the newest source parent, downloads and verifies the ZIP SHA, and only then invokes a lazy quote callback that imports Supabase.
+- The same branch's `tests/test_serie_a_v2_forward_capture.py` explicitly exercises the real CLI: default-deny before archive discovery/database import; parent and ZIP verification before lazy database import; and invalid archive SHA blocking database import and quote read.
+- Exact #975 Source-First run [#45789340144](https://github.com/MaksimBlud/football-ai/actions/runs/45789340144) completed SUCCESS with **534 passed on Python 3.11 and 534 passed on Python 3.12**, plus compilation and production `.pkl` diff guards.
+- Child PR #976 is based on that #975 chain. Its current pre-checkpoint HEAD was `1e55ec424be8ef0fdd8ec80074350831768a25ef`; exact Shadow Validation [#45784300515](https://github.com/MaksimBlud/football-ai/actions/runs/45784300515) completed SUCCESS with **213 passed**, pinned action SHAs, credentialless checkout, and the recovery workflow still default-denied.
+- PR #781 remains the root Ready-for-review default-deny change (HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, 8/8 PR workflows successful); it has not been merged. #879 and the source-first/provenance descendants remain dependent on the root chain. HUMAN-MERGE only.
+
+### Rights and source state
+
+- PR #958 keeps Football-Data source capture, frozen inference, and AI training explicitly denied; no provider-issued authorization is recorded. The two-session manual-download ceiling is not a grant for automated AI use.
+- Big Balls PR #952 current HEAD `69cd50a9b20a18e9a67b2c55a0adbaed53c7d0c5` remains `HOLD_NO_INTEGRATION`: official Free/Edge endpoint and season-depth statements conflict; upstream field-level rights/sublicensing and current per-match corners/cards completeness are unverified; provider correction timestamps are not per-field. Its exact dedicated CI run [#45789668082](https://github.com/MaksimBlud/football-ai/actions/runs/45789668082) passed **33 tests on each of Python 3.11 and 3.12**. No account, key, API call or download was made.
+- Footiqo is already covered by open PR #859 (rights/coverage audit) and child #867 (local-only manual intake); no duplicate audit or export was made. Current official Terms (2026-10-08) prohibit automated scraping/CSV exports without written authorization, while manual normal-interface exports are allowed within the dataset licence. The free samples are for structure inspection; the explicit AI/ML use grant is for purchased premium datasets. The existing audit maps only 17/19 features, lacks red-card fields and per-field source/correction timestamps, and keeps automated capture/inference on HOLD.
+- Open-Matchday is already audited in PR #790 and remains HOLD: non-commercial compilation, unresolved upstream provider rights, no field-level correction chronology, and no demonstrated full 19-feature parity. No new audit was opened.
+
+### Read-only market ledger and frozen candidate
+
+- Read-only `public.odds_snapshots` aggregate on 2026-11-26 used only league/event IDs and snapshot, persistence and kickoff timestamps. Total **3,966** rows / **327** events; strict `snapshot_time_utc < commence_time_utc` and `created_at < commence_time_utc`: **3,915** rows / **327** events; future fixtures with strict pre-match quotes: **0**. Latest strict snapshot: `2026-10-13 14:48:53.042620 UTC`. No score/result/settlement fields were selected.
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; Git blob `ac1303f6b096664983fbf52443bd0a381b23ba21`. It remains 19 features, 20×2 weights, 3,799 training rows; `active_lambda=0`, `shadow_lambda=1`, historical stability FAILED, prospective target-outcome gate CLOSED at 0/30.
+- No target outcomes were read. No Supabase writes/DDL, paid provider/odds calls, refit, weight/feature/contract changes, production `.pkl` changes, main update, merge, promotion, betting, or schedule/agent changes occurred.
+- Supabase Security Advisor on 2026-11-26 still reports RLS disabled on five public tables (`teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`) and four RLS-enabled tables without policies. No DDL was run; do not enable RLS without reviewed policies.
+
+
 ## 2026-11-26 — Original V2 freeze restack includes explicit provider-rights hold
 
 This entry supersedes the immediately following #951-only frozen-candidate restack checkpoint.
