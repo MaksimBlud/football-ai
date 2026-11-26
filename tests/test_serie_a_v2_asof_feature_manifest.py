@@ -1005,3 +1005,59 @@ def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reve
 
     with pytest.raises(ValueError, match="target fixture identity appears as a completed source outcome"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def test_5dollar_openapi_recheck_preserves_fail_closed_source_rights():
+    import json
+    from pathlib import Path
+    import pytest
+    from serie_a_v2_5dollar_source_adapter import _assert_rights_approved
+
+    root = Path(__file__).resolve().parents[1]
+    audit = json.loads(
+        (root / "research/source_rights/5dollarfootballapi_openapi_recheck_20261126.json")
+        .read_text(encoding="utf-8")
+    )
+    manifest = json.loads(
+        (root / "research/source_rights/5dollarfootballapi.json")
+        .read_text(encoding="utf-8")
+    )
+
+    assert audit["decision"] == "HOLD"
+    assert audit["original_v2"]["candidate_sha256"] == (
+        "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
+    )
+    assert audit["original_v2"]["feature_count"] == 19
+    assert audit["original_v2"]["weight_matrix_shape"] == [20, 2]
+    assert audit["original_v2"]["active_lambda"] == 0
+    assert audit["original_v2"]["shadow_lambda"] == 1
+
+    fixture = audit["openapi"]["fixture_endpoint"]
+    assert fixture["documented_fields"] == ["goals", "corners", "cards", "odds"]
+    assert fixture["plan_entitlement_explicit"] is False
+    live_stats = audit["openapi"]["fixture_statistics_endpoint"]
+    assert live_stats["live_only"] is True
+    assert live_stats["is_original_v2_historical_feature_source"] is False
+
+    assert audit["free_plan"]["results_history_months"] == 3
+    assert audit["free_plan"]["pricing_bullets_explicitly_include_fixture_statistics"] is False
+    assert audit["free_plan"]["dedicated_serie_a_page_claims_free_statistics"] is True
+    assert audit["data_quality"]["plan_label"] == "Pro and Ultra"
+    assert audit["data_quality"]["current_season"] == "2026/27"
+    assert audit["data_quality"]["current_season_finished"] == 120
+    assert set(audit["data_quality"]["current_season_fields_percent"].values()) == {100}
+    assert audit["community_access"]["account_holder_self_attestation_required"] is True
+    assert audit["community_access"]["user_eligibility_verified"] is False
+
+    assert audit["terms"]["model_and_internal_tool_use_permitted"] is True
+    assert audit["terms"]["response_caching_permitted"] is True
+    assert audit["terms"]["raw_feed_redistribution_permitted"] is False
+    assert audit["rights"]["upstream_rights_confirmed"] is False
+    assert audit["rights"]["private_research_archive_authorized"] is False
+
+    assert manifest["approval_status"] == "HOLD"
+    assert manifest["provider_private_retention_permitted"] is False
+    assert manifest["upstream_rights_confirmed"] is False
+    assert manifest["free_serie_a_required_fields_confirmed"] is False
+    with pytest.raises(PermissionError, match="HOLD"):
+        _assert_rights_approved()
