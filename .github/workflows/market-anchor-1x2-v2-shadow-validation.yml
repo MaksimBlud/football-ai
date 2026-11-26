@@ -37,7 +37,7 @@ jobs:
       - name: Assert no production model artifact changed
         shell: bash
         run: |
-          git fetch origin main
+          # fetch-depth: 0 already populated origin/main; avoid network after credentials are removed.
           changed="$(git diff --name-only origin/main...HEAD -- '*.pkl')"
           if [ -n "$changed" ]; then
             echo "Production/model pickle changes are forbidden in this research block:"

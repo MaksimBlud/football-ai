@@ -64,6 +64,18 @@ def test_recovery_workflow_keeps_candidate_rebuild_default_denied_and_all_action
     assert "if: ${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}" in archive_block
 
 
+
+def test_shadow_validation_uses_fetched_origin_main_without_post_checkout_network_access():
+    workflow = SHADOW.read_text(encoding="utf-8")
+    checkout = workflow.split("      - uses: actions/checkout@", 1)[1].split(
+        "      - uses: actions/setup-python@", 1
+    )[0]
+    assert "fetch-depth: 0" in checkout
+    assert "persist-credentials: false" in checkout
+    assert "git fetch origin main" not in workflow
+    assert "git diff --name-only origin/main...HEAD -- '*.pkl'" in workflow
+
+
 def test_continuity_updates_trigger_frozen_shadow_validation():
     workflow = SHADOW.read_text(encoding="utf-8")
     pull_request_paths = workflow.split("  pull_request:", 1)[1].split("\npermissions:", 1)[0]

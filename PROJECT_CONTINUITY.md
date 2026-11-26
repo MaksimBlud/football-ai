@@ -1,5 +1,13 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 12:01 UTC — keep frozen shadow CI compatible with private repository storage
+
+A second review of the #976 shadow-validation job found a post-checkout `git fetch origin main` after checkout had deliberately set `persist-credentials: false`. That extra network fetch is unnecessary and would lack persisted authentication when the repository is made private. The pinned actions/checkout v4.2.2 README confirms `fetch-depth: 0` fetches all history for all branches and tags, including the local `origin/main` ref needed by the existing production-`.pkl` diff guard.
+
+The workflow now uses the already-fetched local `origin/main` and does not initiate another Git network request after checkout. A new static regression requires `fetch-depth: 0`, `persist-credentials: false`, the local diff guard, and absence of `git fetch origin main`.
+
+This is an offline CI/private-repository compatibility fix only. No credentials were added or broadened. Candidate bytes, 19-feature contract, weights, scaler/imputer, lambdas, gates and production artifacts are unchanged. No provider/odds request, Supabase operation, protected-outcome read, main update, merge, schedule change or other-agent change occurred. Exact-head CI is required for this commit. Draft / HUMAN-MERGE only.
+
 ## 2026-11-26 11:49 UTC — align frozen shadow checkout with the official v4.2.2 release pin
 
 A fresh upstream ref check found that the shadow-validation workflow used checkout commit `d23441a48e516b6c34aea4fa41551a30e30af803`. The commit is signed and present in the upstream actions/checkout repository, but its commit message identifies it as a backport to `releases-v6`; it is not the official `v4.2.2` tag target. The upstream tag ref `refs/tags/v4.2.2` resolves directly to `11bd71901bbe5b1630ceea73d27597364c9af683`.
