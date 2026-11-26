@@ -13,8 +13,8 @@ TEST_PATH = 'tests/test_serie_a_v2_source_first_validation_workflow_contract.py'
 BRANCH = "research/v2-source-first-validator-node24-pins-on-949-20261124-run11"
 
 EXPECTED_USES = [
-    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
-    "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+    "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+    "actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548",
 ]
 
 
@@ -24,6 +24,8 @@ def test_source_first_validation_uses_only_exact_upstream_verified_node24_action
     assert actual == EXPECTED_USES
     assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" not in text
     assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" not in text
+    assert "d23441a48e516b6c34aea4fa41551a30e30af803" not in text
+    assert "ece7cb06caefa5fff74198d8649806c4678c61a1" not in text
     assert not re.search(r"^\s*uses:\s*actions/(?:checkout|setup-python)@v\d+\s*$", text, re.MULTILINE)
 
 
