@@ -262,7 +262,8 @@ def test_bigballs_20261126_openapi_recheck_keeps_hold():
     assert rights["raw_feed_resale_or_redistribution_permitted"] is False
     assert rights["upstream_field_level_rights_independently_verified"] is False
 
-    assert recheck["original_v2"]["candidate_sha256"] == CANDIDATE_SHA
+    candidate = json.loads(CANDIDATE.read_text(encoding="utf-8"))
+    assert recheck["original_v2"]["candidate_sha256"] == candidate["artifact_sha256"]
     assert recheck["original_v2"]["feature_count"] == 19
     assert recheck["original_v2"]["weight_matrix_shape"] == [20, 2]
     assert recheck["original_v2"]["active_lambda"] == 0
