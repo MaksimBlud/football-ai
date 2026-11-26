@@ -228,7 +228,7 @@ def test_v2_stability_gate_is_explicitly_attributed_to_pinned_v1_evidence():
 
     observed = protocol["stability_gate"]["observed"]
     assert observed["prior_seasons"] == v1_robustness["retrospective_prior_seasons"] == 6
-    assert observed["prior_dual_metric_wins"] == v1_robustness["retrospective_prior_season_dual_wins"] == 2
+    assert observed["prior_season_dual_metric_wins"] == v1_robustness["retrospective_prior_season_dual_wins"] == 2
     assert observed["brier_bootstrap_ci95_high"] == v1_robustness["final_oot_brier_bootstrap"]["bootstrap_ci95_high"]
     assert observed["log_loss_bootstrap_ci95_high"] == v1_robustness["final_oot_log_loss_bootstrap"]["bootstrap_ci95_high"]
     assert observed["brier_bootstrap_probability_better_than_market"] == v1_robustness["final_oot_brier_bootstrap"]["bootstrap_probability_better_than_market"]
