@@ -1,0 +1,115 @@
+{
+  "schema_version": "5DOLLAR_ORIGINAL_V2_OPENAPI_RECHECK_V1",
+  "provider": "5DollarFootballAPI",
+  "reviewed_at_utc": "2026-11-26",
+  "decision": "HOLD",
+  "scope": "Official public pricing, Serie A, data-quality, terms, trust-center and OpenAPI documentation only. No account, self-attestation, API key, API/odds request, source download, Supabase access, feature build, inference or protected-outcome read.",
+  "original_v2": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_count": 19,
+    "weight_matrix_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_lambda": 1
+  },
+  "openapi": {
+    "url": "https://5dollarfootballapi.com/openapi.json",
+    "fixture_endpoint": {
+      "path": "/v1/fixtures/{id}",
+      "documented_fields": [
+        "goals",
+        "corners",
+        "cards",
+        "odds"
+      ],
+      "plan_entitlement_explicit": false,
+      "description": "A single fixture with goals, corners, cards and odds lines."
+    },
+    "fixture_statistics_endpoint": {
+      "path": "/v1/fixtures/{id}/statistics",
+      "live_only": true,
+      "description": "Live match statistics: attacks, shots and possession — with first-half splits.",
+      "is_original_v2_historical_feature_source": false
+    },
+    "list_include": {
+      "stats_scope": "In-play statistics",
+      "odds_scope": "Pro and above on fixture lists; Free reads per-fixture odds at /v1/fixtures/{id}/odds"
+    }
+  },
+  "free_plan": {
+    "price_usd_per_month": 0,
+    "requests_per_hour": 60,
+    "top_five_includes_serie_a": true,
+    "results_history_months": 3,
+    "pricing_bullets_explicitly_include_fixture_statistics": false,
+    "dedicated_serie_a_page_claims_free_statistics": true,
+    "explicit_fixture_field_entitlement_verified": false
+  },
+  "data_quality": {
+    "page_url": "https://5dollarfootballapi.com/docs/data-quality/3405541143",
+    "plan_label": "Pro and Ultra",
+    "current_season": "2026/27",
+    "current_season_from": "2026-08-23",
+    "current_season_through": "2026-11-24",
+    "current_season_finished": 120,
+    "current_season_fixtures": 120,
+    "current_season_fields_percent": {
+      "corners": 100,
+      "half_time_corners": 100,
+      "corner_line": 100,
+      "odds": 100,
+      "events": 100,
+      "live_stats": 100,
+      "cards": 100
+    },
+    "last_12_months_finished": 382,
+    "last_12_months_fixtures": 382,
+    "last_12_months_fields_percent": {
+      "corners": 100,
+      "half_time_corners": 100,
+      "corner_line": 100,
+      "odds": 100,
+      "events": 100,
+      "live_stats": 100,
+      "cards": 100
+    }
+  },
+  "community_access": {
+    "price_usd_per_month": 0,
+    "top_five_plus_one_country_pack": true,
+    "history_months": 12,
+    "requests_per_hour": 300,
+    "requests_per_minute": 20,
+    "account_holder_self_attestation_required": true,
+    "user_eligibility_verified": false,
+    "authenticated_response_verified": false
+  },
+  "terms": {
+    "last_updated": "2026-10",
+    "model_and_internal_tool_use_permitted": true,
+    "response_caching_permitted": true,
+    "raw_feed_redistribution_permitted": false,
+    "public_attribution_required_on_free_community_education": true,
+    "attribution_optional_for_private_internal_use": true,
+    "private_retention_duration_documented": false
+  },
+  "trust_center": {
+    "url": "https://5dollarfootballapi.com/trust",
+    "event_capture_delay_percent_within_2_match_minutes": 97.3,
+    "events_sampled": 296,
+    "matches_sampled": 63,
+    "retracted_events": 4,
+    "minute_revisions": 49,
+    "measured_at_utc": "2026-11-25T19:05:00Z",
+    "clock_basis": "Provider's own event minute; no independent end-to-end clock."
+  },
+  "rights": {
+    "upstream_rights_confirmed": false,
+    "private_retention_duration_documented": false,
+    "private_research_archive_authorized": false,
+    "free_serie_a_required_fields_confirmed": false
+  },
+  "decision_reason": "The OpenAPI documents fixture-level goals, corners and cards but does not state Free-plan entitlement for those fields. The Free pricing bullets specify live scores, fixtures, standings and the last three months of results, while the dedicated Serie A page claims free statistics and the measured data-quality page labels Serie A Pro and Ultra. Community is $0 but requires account-holder self-attestation and has no verified authenticated response. Terms permit model/internal use and caching but do not establish upstream licensors or a private-retention duration. Keep HOLD until the provider supplies written field-entitlement, upstream-rights and private-retention clarification."
+}
