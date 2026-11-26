@@ -1,3 +1,18 @@
+## 2026-11-26 — strict current-form identity audit restacked onto frozen candidate chain
+
+A new child PR #977 carries the already-reviewed strict metadata identity implementation from sibling PR #966 onto the current frozen-candidate/security chain ending at #976.
+
+- Parent #976 exact HEAD at branch creation: `6f5f29278dc3bddc07ec0501cb8e12d624a664e8`.
+- New child PR #977 initial code/test HEAD: `832e3360dbe81b3942c0e0c1cacc3f198eba555d`; current-form source and test files are the same reviewed implementation as #966 HEAD `b086251e58eb78af018dd5159231c0f7cfa68bb2`.
+- The restack changes only `serie_a_v2_current_form_source_capture.py` and `tests/test_serie_a_v2_current_form_source_capture.py` at the initial code/test checkpoint. It requires date-only canonical `YYYY-MM-DD`, rejects timestamps/suffixed dates and reversed home/away duplicates after the V2-local Atalanta alias, reconciles raw/canonical identities, and records the metadata-only identity audit.
+- The Supabase gate projection remains exactly `match_date,home_team,away_team`; no scores, results, settlements or target outcomes are selected. Ambiguous identities fail before any source download.
+- Exact-head Source-First run #45872888290 completed SUCCESS on initial code/test HEAD `832e3360dbe81b3942c0e0c1cacc3f198eba555d`: Python 3.11 **542 passed**, Python 3.12 **542 passed**, and both `git diff --exit-code origin/main...HEAD -- '*.pkl'` guards passed.
+- The original frozen candidate was independently re-read on the #977 branch: Git blob SHA-1 `ac1303f6b096664983fbf52443bd0a381b23ba21`; embedded SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`. The 19-feature/20×2 contract and `active_lambda=0`, `shadow_lambda=1` remain unchanged.
+- This restack removes the earlier ancestry gap: the strict identity audit is now a descendant of #976/#975 rather than a sibling of #975. The code has not run against live Supabase; the main-reported 120 feature-input events remain an unverified metadata count until a permitted run can apply this strict implementation.
+- PR #977 is Draft / HUMAN-MERGE only, based on #976. It does not update main or alter any workflow schedule.
+
+No source/provider request, archive download, quote read, Supabase access/write/DDL, protected outcome read, inference, refit, threshold tuning, paid API request, production `.pkl` change, model/weight change, promotion, bet or merge occurred.
+
 ## 2026-11-26 — strict canonical feature-input gate is still a sibling blocker
 
 A follow-up code/ancestry check qualifies the 120-event count reported by main current-form Source Capture:
