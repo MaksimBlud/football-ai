@@ -1,5 +1,13 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 11:49 UTC — align frozen shadow checkout with the official v4.2.2 release pin
+
+A fresh upstream ref check found that the shadow-validation workflow used checkout commit `d23441a48e516b6c34aea4fa41551a30e30af803`. The commit is signed and present in the upstream actions/checkout repository, but its commit message identifies it as a backport to `releases-v6`; it is not the official `v4.2.2` tag target. The upstream tag ref `refs/tags/v4.2.2` resolves directly to `11bd71901bbe5b1630ceea73d27597364c9af683`.
+
+The #976 shadow-validation workflow and its static regression now use that exact official tag SHA. `persist-credentials: false`, `fetch-depth: 0`, read-only contents permission, secret-free CI, the setup-python v5.6.0 pin, and the recovery workflow's default-deny/private-storage checks are unchanged. The regression asserts the exact v4.2.2 commit.
+
+This is an offline CI supply-chain pin correction only. The original candidate, 19-feature order, weights, scaler/imputer, training fingerprint, active_lambda=0, shadow_lambda=1, outcome gates and production artifacts are untouched. No provider request, quote read, Supabase operation, protected outcome read, main update, merge, schedule change or other-agent change occurred. Exact-head CI is required for the new commit; prior runs validate only the preceding SHA. Draft / HUMAN-MERGE only.
+
 ## 2026-11-26 11:02 UTC — Recovery workflow action pins restacked on current frozen V2 chain
 
 This entry supersedes earlier #976 workflow-action SHA references. The changes are limited to the original frozen V2 recovery workflow and its offline security regression.

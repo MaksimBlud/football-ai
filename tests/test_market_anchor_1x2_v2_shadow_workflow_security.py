@@ -17,7 +17,7 @@ def _action_refs(text: str) -> list[str]:
 def test_original_v2_shadow_validation_pins_actions_and_does_not_persist_checkout_credentials():
     workflow = SHADOW.read_text(encoding="utf-8")
     assert _action_refs(workflow) == [
-        "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+        "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
         "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
     ]
     checkout = workflow.split("      - uses: actions/checkout@", 1)[1].split(
