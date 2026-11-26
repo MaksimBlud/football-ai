@@ -1,5 +1,50 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 10:53 UTC — Superseding exact-head checkpoint for Original V2 #976
+
+This entry supersedes the earlier #976 SHA references below. It records read-only verification only; no model or main-branch changes.
+
+### Exact current PR chain and CI
+
+- Fresh default branch remains `main` at `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository visibility is **public**.
+- PR #975 remains OPEN / Draft / HUMAN-MERGE, exact HEAD `bf5446c2692b8a0e9955f685b88d353f24d486e6`, base #958 exact HEAD `08947e00764e490bc489d6db2d47da3bc541aa81`, mergeable=true.
+- PR #976 remains OPEN / Draft / HUMAN-MERGE, exact HEAD before this continuity-only commit `bf3e864dc108f6526e3a6d7e9d997fe419a2cedd`, based on #975 exact HEAD `bf5446c2692b8a0e9955f685b88d353f24d486e6`, mergeable=true.
+- Exact #976 Shadow Validation [#45797708168](https://github.com/MaksimBlud/football-ai/actions/runs/45797708168) completed SUCCESS: **214 passed**; immutable checkout/setup-python action SHAs, compile step and production `.pkl` diff guard passed.
+- Exact #976 Source-First Validation [#45797708183](https://github.com/MaksimBlud/football-ai/actions/runs/45797708183) completed SUCCESS: **534 passed on Python 3.11 and 534 passed on Python 3.12**; compile and production `.pkl` diff guards passed.
+- A La Liga validation triggered by the continuity path filter [#45797708160](https://github.com/MaksimBlud/football-ai/actions/runs/45797708160) also completed SUCCESS. It is not a V2 runtime forecast.
+- Parent #975 Source-First run [#45789340144](https://github.com/MaksimBlud/football-ai/actions/runs/45789340144) remains SUCCESS on the exact parent SHA, with **534 passed on each Python version**. Parent validation is not substituted for the child #976 exact-head runs.
+
+### Fresh main-path verification
+
+- Main forward CLI blob: `5db02cbd1367ed25b994b152acf371421859a014`. Its `main()` still imports `database.supabase` and calls `fetch_saved_upcoming_serie_a_quotes()` before `discover_archives()` and before parent-run / ZIP-SHA verification. The source attestation workflow step runs earlier in the workflow, but the direct CLI path remains unsafe until the pending source-first guard chain is integrated.
+- Main forward workflow blob: `48ce3b0d8e31c4cf293b94500e9c320047311467`. It still contains the daily free-forward schedule, job-level Supabase/GitHub credentials, mutable `upload-artifact@v4`, and `if: always()` artifact upload. Main remains public. Do not manually dispatch or enable live capture.
+- Root default-deny PR #781 remains OPEN / Ready / unmerged at exact HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, 8/8 exact-head checks previously recorded SUCCESS. Its descendants, including private-storage #879 and source-first/frozen #975/#976, remain HUMAN-MERGE only.
+
+### Read-only pre-match ledger refresh
+
+A fresh read-only aggregate against `public.odds_snapshots` selected only event identity and snapshot, persistence and kickoff timestamps:
+
+- Total: **3,966 rows / 327 events**.
+- Strict pre-match: **3,915 rows / 327 events**, requiring `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`.
+- Future events with a strict pre-match quote: **0**.
+- Missing time fields: **0**; persistence-before-snapshot rows: **0**.
+- Latest strict pre-match snapshot: `2026-10-13 14:48:53.042620 UTC`.
+
+No score, result, settlement, target-outcome or protected 2026/27 fields were selected. No database writes or DDL were performed.
+
+### Frozen candidate invariants
+
+- Original candidate SHA-256: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; Git blob: `ac1303f6b096664983fbf52443bd0a381b23ba21`.
+- Ordered feature contract: 19; weight matrix: 20×2; training rows: 3,799.
+- `active_lambda=0`; `shadow_lambda=1` research-only.
+- Historical stability remains FAILED; prospective target-outcome evaluation remains CLOSED at **0/30**.
+- No provider source is cleared for capture/inference/training. Big Balls #952 remains HOLD; Football-Data #958 remains deny-all; no API key/account/request/download was made.
+
+No main update, merge, provider request, paid odds call, Supabase write/DDL, protected-outcome read, refit, weight/feature/contract change, production `.pkl` change, promotion, bet, schedule change, or other-agent setting change occurred.
+
+**Validation note:** this continuity edit is on the existing #976 branch only. Because `PROJECT_CONTINUITY.md` is included in the V2 workflow path filters, its new commit must receive fresh exact-head CI; the runs above validate the immediately preceding #976 SHA only.
+
+
 ## 2026-11-26 — Fresh main / exact-head V2 source-order and CI checkpoint
 
 This checkpoint supersedes the earlier 2026-11-26 SHA references in the preceding freeze-restack note. All work remains Original `MARKET_ANCHOR_1X2_V2` only.
