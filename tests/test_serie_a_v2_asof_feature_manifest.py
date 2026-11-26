@@ -1005,3 +1005,291 @@ def test_5dollar_adapter_rejects_target_identity_when_source_orientation_is_reve
 
     with pytest.raises(ValueError, match="target fixture identity appears as a completed source outcome"):
         build_manifest_from_private_archive(tmp_path, capture, quotes)
+
+
+def _synthetic_opening_quote_bundle(tmp_path, opened_at="2026-11-12T08:01:00+00:00"):
+    import hashlib
+    import json
+    from serie_a_v2_5dollar_opening_quote_adapter import _sha256_json
+
+    capture, _, _ = _synthetic_5dollar_bundle(tmp_path)
+    # The target fixture must not be present in the lagged source archive.
+    source_path = tmp_path / "page-1.json"
+    source_payload = json.loads(source_path.read_text(encoding="utf-8"))
+    source_payload["data"] = [
+        row for row in source_payload["data"] if row.get("status") == "finished"
+    ]
+    source_payload["pagination"]["count"] = len(source_payload["data"])
+    source_raw = json.dumps(
+        source_payload, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    source_path.write_bytes(source_raw)
+    source_path.chmod(0o600)
+    capture["pages"][0]["response_sha256"] = hashlib.sha256(source_raw).hexdigest()
+    capture["pages"][0]["response_bytes"] = len(source_raw)
+
+    quote_dir = tmp_path / "quotes"
+    quote_dir.mkdir()
+    quote_dir.chmod(0o700)
+    quote_payload = {
+        "success": 1,
+        "data": {
+            "fixture_id": 9999,
+            "bookmakers": [{
+                "name": "Bet 365",
+                "slug": "bet365",
+                "odds": {
+                    "1x2": {
+                        "opening": {
+                            "home": 2.0,
+                            "draw": 3.5,
+                            "away": 4.0,
+                            "opened_at": opened_at,
+                        },
+                        # These deliberately extreme values must never be read.
+                        "closing": {"home": 99.0, "draw": 99.0, "away": 99.0},
+                        "inplay": {"home": 1.01, "draw": 50.0, "away": 100.0},
+                    }
+                },
+            }],
+        },
+    }
+    quote_raw = json.dumps(
+        quote_payload, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    quote_path = quote_dir / "odds.json"
+    quote_path.write_bytes(quote_raw)
+    quote_path.chmod(0o600)
+    quote_capture = {
+        "schema_version": "5DOLLAR_PRIVATE_OPENING_QUOTE_CAPTURE_V1",
+        "provider": "5DollarFootballAPI",
+        "api_plan": "free",
+        "storage_class": "private_local",
+        "capture_run_id": "43180000001",
+        "capture_commit_sha": "b" * 40,
+        "source_capture_run_id": capture["capture_run_id"],
+        "source_capture_commit_sha": capture["capture_commit_sha"],
+        "source_capture_manifest_sha256": _sha256_json(capture),
+        "source_capture_completed_at_utc": "2026-11-12T08:00:05+00:00",
+        "response_file": "odds.json",
+        "request_url": "https://api.5dollarfootballapi.com/v1/fixtures/9999/odds",
+        "http_status": 200,
+        "request_started_at_utc": "2026-11-12T08:01:30+00:00",
+        "response_received_at_utc": "2026-11-12T08:01:31+00:00",
+        "captured_at_utc": "2026-11-12T08:01:31+00:00",
+        "response_sha256": hashlib.sha256(quote_raw).hexdigest(),
+        "response_bytes": len(quote_raw),
+        "paid_provider_calls": 0,
+        "supabase_writes": 0,
+        "target_outcomes_read": False,
+        "target_outcomes_scored": False,
+    }
+    fixture = {
+        "fixture_id": 9999,
+        "event_id": "9999",
+        "league_id": 3405541143,
+        "league": "SERIE_A",
+        "home_team": "Juventus",
+        "away_team": "Inter Milan",
+        "commence_time_utc": "2026-11-13T20:00:00+00:00",
+        "status": "scheduled",
+    }
+    return capture, quote_dir, quote_capture, fixture
+
+
+def _rewrite_opening_quote_response(quote_dir, quote_capture, mutate):
+    import hashlib
+    import json
+
+    path = quote_dir / quote_capture["response_file"]
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    mutate(payload)
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    path.write_bytes(raw)
+    path.chmod(0o600)
+    quote_capture["response_sha256"] = hashlib.sha256(raw).hexdigest()
+    quote_capture["response_bytes"] = len(raw)
+
+
+def test_5dollar_opening_quote_records_provenance_without_claiming_market_compatibility(tmp_path):
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+    from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    report = build_opening_prequote_manifest(
+        tmp_path, capture, quote_dir, quote_capture, fixture
+    )
+
+    assert report["candidate_sha256"] == FROZEN_SHA
+    assert report["feature_count"] == 19
+    assert len(report["feature_manifest"]["features"]) == 19
+    assert report["market_odds"] == {"home": 2.0, "draw": 3.5, "away": 4.0}
+    assert report["market_contract_match"] is False
+    assert "pre-closing" in report["market_contract_note"]
+    assert "market_probabilities" not in report
+    assert report["quote_capture"]["market_price_stage"] == "opening"
+    assert report["quote_capture"]["model_market_contract_match"] is False
+    assert report["quote_capture"]["bookmaker_slug"] == "bet365"
+    assert report["quote_capture"]["quote_opened_at_utc"] == "2026-11-12T08:01:00+00:00"
+    assert report["quote_capture"]["upstream_quote_observation_timestamp_available"] is True
+    assert report["quote_capture"]["upstream_source_observation_timestamp_available"] is False
+    assert report["source_before_quote_order_validated"] is True
+    assert report["source_before_quote_verified"] is False
+    assert report["model_inference_performed"] is False
+    assert report["target_outcomes_read"] is False
+    assert report["target_outcomes_scored"] is False
+    assert report["eligible_for_frozen_prospective_cohort"] is False
+    assert report["eligible_for_product_publication"] is False
+    assert report["paid_provider_calls"] == 0
+    assert report["supabase_writes"] == 0
+    assert "closing" not in report["market_odds"]
+    assert "inplay" not in report["market_odds"]
+
+
+def test_5dollar_opening_quote_rejects_opened_at_before_source_completion(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(
+        tmp_path, opened_at="2026-11-12T08:00:04+00:00"
+    )
+    with pytest.raises(ValueError, match="opened strictly after source workflow completion"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_capture_after_kickoff(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    quote_capture["request_started_at_utc"] = "2026-11-13T19:59:59+00:00"
+    quote_capture["response_received_at_utc"] = "2026-11-13T20:00:00+00:00"
+    quote_capture["captured_at_utc"] = quote_capture["response_received_at_utc"]
+    with pytest.raises(ValueError, match="strictly before kickoff"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_missing_opened_at_and_never_falls_back_to_closing(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    _rewrite_opening_quote_response(
+        quote_dir, quote_capture,
+        lambda payload: payload["data"]["bookmakers"][0]["odds"]["1x2"].pop("opening"),
+    )
+    with pytest.raises(ValueError, match="opening prices are required"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_non_bet365_and_duplicate_bet365(tmp_path):
+    import copy
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    _rewrite_opening_quote_response(
+        quote_dir, quote_capture,
+        lambda payload: payload["data"]["bookmakers"][0].update({"slug": "pinnacle"}),
+    )
+    with pytest.raises(ValueError, match="exactly one Bet365"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
+    def duplicate(payload):
+        payload["data"]["bookmakers"].append(copy.deepcopy(payload["data"]["bookmakers"][0]))
+    _rewrite_opening_quote_response(quote_dir, quote_capture, duplicate)
+    with pytest.raises(ValueError, match="exactly one Bet365"):
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_bad_raw_sha_and_non_free_plan(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    quote_capture["response_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
+    quote_capture["api_plan"] = "pro"
+    with pytest.raises(PermissionError, match="only the"):
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_source_manifest_and_run_mismatch(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    quote_capture["source_capture_run_id"] = "43180000099"
+    with pytest.raises(ValueError, match="different source capture run"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
+    quote_capture["source_capture_manifest_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="manifest SHA-256 mismatch"):
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_target_outcome_fields_and_wrong_market_identity(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    fixture["score"] = {"home": 1, "away": 0}
+    with pytest.raises(ValueError, match="target outcome fields are forbidden"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+    case2 = tmp_path / "case2"
+    case2.mkdir()
+    case2.chmod(0o700)
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(case2)
+    fixture["league_id"] = 1
+    with pytest.raises(ValueError, match="exact Serie A"):
+        build_opening_prequote_manifest(case2, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_target_fixture_if_it_is_inside_source_archive(tmp_path):
+    import hashlib
+    import json
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    source_path = tmp_path / "page-1.json"
+    payload = json.loads(source_path.read_text(encoding="utf-8"))
+    target = _synthetic_5dollar_fixture(99)
+    target["id"] = 9999
+    payload["data"].append(target)
+    payload["pagination"]["count"] = len(payload["data"])
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    source_path.write_bytes(raw)
+    source_path.chmod(0o600)
+    capture["pages"][0]["response_sha256"] = hashlib.sha256(raw).hexdigest()
+    capture["pages"][0]["response_bytes"] = len(raw)
+    quote_capture["source_capture_manifest_sha256"] = __import__(
+        "serie_a_v2_5dollar_opening_quote_adapter"
+    )._sha256_json(capture)
+    with pytest.raises(ValueError, match="target quote event id appears"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
+
+
+def test_5dollar_opening_quote_rejects_world_readable_quote_archive(tmp_path):
+    import pytest
+    from serie_a_v2_5dollar_opening_quote_adapter import build_opening_prequote_manifest
+
+    capture, quote_dir, quote_capture, fixture = _synthetic_opening_quote_bundle(tmp_path)
+    quote_dir.chmod(0o755)
+    with pytest.raises(PermissionError, match="exclude group/other access"):
+        build_opening_prequote_manifest(tmp_path, capture, quote_dir, quote_capture, fixture)
