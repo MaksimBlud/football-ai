@@ -17,8 +17,8 @@ def _action_refs(text: str) -> list[str]:
 def test_original_v2_shadow_validation_pins_actions_and_does_not_persist_checkout_credentials():
     workflow = SHADOW.read_text(encoding="utf-8")
     assert _action_refs(workflow) == [
-        "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
-        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+        "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+        "actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548",
     ]
     checkout = workflow.split("      - uses: actions/checkout@", 1)[1].split(
         "      - uses: actions/setup-python@", 1
@@ -36,9 +36,9 @@ def test_original_v2_shadow_validation_pins_actions_and_does_not_persist_checkou
 def test_recovery_workflow_keeps_candidate_rebuild_default_denied_and_all_actions_pinned():
     workflow = RECOVERY.read_text(encoding="utf-8")
     assert _action_refs(workflow) == [
-        "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
-        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
-        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+        "actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548",
+        "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f",
     ]
     checkout = workflow.split("      - uses: actions/checkout@", 1)[1].split(
         "      - uses: actions/setup-python@", 1

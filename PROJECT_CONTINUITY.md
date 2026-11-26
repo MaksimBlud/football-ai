@@ -1,5 +1,17 @@
 # Football AI — Project Continuity
 
+## 2026-11-26 — align all frozen V2 shadow/recovery actions to official Node 24 releases
+
+The exact-head shadow job exposed GitHub's Node 20 deprecation warning for the previous checkout v4.2.2 and setup-python v5.6.0 pins. The #976 shadow and recovery workflows are now aligned with the same upstream-verified Node 24 release commits already used by the source-first validator:
+
+- `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` — official tag `v6.0.2`, `action.yml` confirms `node24`.
+- `actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548` — official tag `v6.1.0`, `action.yml` confirms `node24`.
+- `actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f` — official tag `v6.0.0`, `action.yml` confirms `node24`.
+
+The offline workflow-security regression now asserts these exact release SHAs for both shadow and recovery. Existing `persist-credentials: false`, read-only `contents` permission, no-secret/no-provider/no-Supabase shadow CI, recovery `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false`, private-repository gate, no schedule, and production-`.pkl` diff guard are unchanged.
+
+This is a CI runtime/supply-chain update only. No candidate bytes, features, weights, scaler/imputer, training fingerprint, lambda semantics, evaluation gates or production artifacts changed. No provider request, odds read, Supabase operation, protected-outcome read, main update, merge, promotion, bet, schedule change or other-agent change occurred. Exact-head CI is required for this commit. Draft / HUMAN-MERGE only.
+
 ## 2026-11-26 — exact-head V2 CI, main runtime and pre-match ledger checkpoint
 
 ### #976 exact-head code validation
