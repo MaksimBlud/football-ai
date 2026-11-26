@@ -1,0 +1,78 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_EXTERNAL_STATS_SOURCE_AUDIT_V1",
+  "source": "datasportsapi",
+  "operator": "Noventra Software Ltd",
+  "checked_at_utc": "2026-11-20T21:50:45Z",
+  "candidate_status": "HOLD_NO_INTEGRATION",
+  "scope": "Official public documentation only; match statistics as lagged inputs for original frozen V2. No odds endpoint or authenticated API use.",
+  "free_plan": {
+    "price_usd_per_month": 0,
+    "requests_per_day_during_beta": 1000,
+    "requests_per_day_after_beta": 100,
+    "requests_per_minute": 10,
+    "finished_match_history_days": 7,
+    "upcoming_and_live_data_history_limited": false,
+    "odds_included": false
+  },
+  "serie_a": {
+    "league_id": 195910,
+    "teams": 20,
+    "fixtures_per_season": 380,
+    "current_season_team_statistics_available_all_plans": true,
+    "current_season_finished_match_history_free_days": 7
+  },
+  "technical_coverage": {
+    "core_fixtures_results_events_lineups_statistics_included_on_free": true,
+    "match_statistics_endpoint": "GET /v2/fixtures/{id}/statistics",
+    "match_statistics_endpoint_fixture_scoped": true,
+    "documented_as_live_match_statistics": true,
+    "team_season_statistics_endpoint_available_all_plans": true,
+    "team_season_totals_substitute_for_original_rolling_match_features": false,
+    "free_last_10_match_reconstruction_from_current_historical_window_possible": false,
+    "one_call_whole_round_match_statistics_export_on_free_documented": false,
+    "per_fixture_per_stat_first_observation_timestamp_documented": false,
+    "per_stat_correction_history_documented": false
+  },
+  "rights": {
+    "own_products_and_analysis_including_commercial_use_permitted": true,
+    "raw_feed_resale_or_redistribution_prohibited": true,
+    "third_party_sources_disclosed": true,
+    "upstream_serie_a_statistics_rights_chain_identified": false,
+    "long_term_private_raw_response_retention_explicitly_granted": false,
+    "provider_terms_acknowledge_late_incomplete_wrong_or_corrected_data": true
+  },
+  "current_v2_contract": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "frozen_feature_count": 19,
+    "original_weights_changed": false,
+    "scaler_or_imputer_changed": false,
+    "active_lambda": 0,
+    "shadow_lambda": 1,
+    "new_source_integration_allowed": false
+  },
+  "actions": {
+    "account_created": false,
+    "api_key_created": false,
+    "authenticated_api_requests": 0,
+    "source_downloads": 0,
+    "odds_endpoint_called": false,
+    "supabase_writes": 0,
+    "supabase_ddl": false,
+    "model_code_changed": false,
+    "model_weights_changed": false,
+    "production_pkl_changed": false,
+    "protected_2026_27_outcomes_read": false
+  },
+  "decision": {
+    "integration_allowed": false,
+    "reason": "Free history is only seven days and cannot reconstruct the current last-10 per-match windows; team season aggregates are not equivalent. Upstream rights, long-term private archive retention and per-stat first-observation/correction timestamps remain unconfirmed.",
+    "future_only_capture_could_be_reconsidered_after_written_clearance": true
+  },
+  "official_sources": [
+    "https://datasportsapi.com/terms/",
+    "https://datasportsapi.com/sports/football/serie-a/",
+    "https://datasportsapi.com/docs/limits/",
+    "https://datasportsapi.com/docs/",
+    "https://datasportsapi.com/docs/reference/"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_EXTERNAL_STATS_SOURCE_AUDIT_V1",
+  "source": "serie-a-observatory-derived-from-lega-serie-a-match-reports",
+  "checked_at_utc": "2026-11-21T22:53:56Z",
+  "candidate_status": "HOLD_NO_INTEGRATION",
+  "scope": "Potential free lagged Serie A statistics source for the unchanged original frozen V2 only. This is a public-rights and provenance audit, not permission to ingest or infer.",
+  "dataset": {
+    "repository": "https://github.com/matteovezzoli/serie-a-observatory",
+    "stated_source": "Official Lega Serie A Match Report PDFs",
+    "stated_coverage": "2026/27 season; README says the dataset is updated weekly",
+    "published_files": [
+      "data/processed/matches.csv",
+      "data/processed/players.csv",
+      "data/processed/reports.csv"
+    ],
+    "reported_team_statistics_count": 16,
+    "report_metadata": "README says reports.csv records competition, publication date and last-update date",
+    "correction_behavior": "README says reports can be corrected 0–12 days after a match",
+    "exact_per_stat_first_observed_timestamp_documented": false,
+    "full_original_19_feature_parity_verified": false,
+    "raw_match_report_pdfs_in_repository": false
+  },
+  "rights": {
+    "official_terms_url": "https://www.legaseriea.it/terms-and-conditions",
+    "official_terms_version_date": "2025-12-01",
+    "personal_noncommercial_use_only": true,
+    "extraction_without_express_written_consent_prohibited": true,
+    "data_mining_robots_or_similar_extraction_without_written_consent_prohibited": true,
+    "express_written_consent_obtained": false,
+    "repository_license": "MIT",
+    "repository_license_scope": "The LICENSE text grants rights to the Software and associated documentation; it is not a separate upstream data license and cannot establish Lega Serie A database/content rights.",
+    "upstream_data_rights_cleared": false,
+    "intended_internal_ml_use_cleared": false,
+    "durable_private_raw_retention_cleared": false
+  },
+  "current_v2_contract": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "frozen_feature_count": 19,
+    "active_lambda": 0,
+    "shadow_lambda": 1,
+    "new_source_integration_allowed": false
+  },
+  "decision": {
+    "status": "HOLD_NO_INTEGRATION",
+    "reasons": [
+      "Official Lega Serie A terms restrict extraction or use of platform content, including data mining and robots, without express written consent.",
+      "The third-party repository's MIT license is a software license and does not establish rights to upstream Lega Serie A match-report data.",
+      "The repository's automated weekly PDF extraction pipeline is not evidence that this project is authorized to repeat that extraction.",
+      "Publication and last-update dates are described at date granularity; exact per-stat first-observed timestamps are not documented in the inspected README.",
+      "Reports may be corrected 0–12 days after a match, so a later CSV snapshot can revise historical statistics.",
+      "Exact parity with the original frozen 19-feature order and the source-before-quote chronology has not been verified.",
+      "The original frozen V2 source contract does not authorize adding this provider."
+    ]
+  },
+  "evidence_urls": [
+    "https://github.com/matteovezzoli/serie-a-observatory",
+    "https://github.com/matteovezzoli/serie-a-observatory/blob/main/README.md",
+    "https://github.com/matteovezzoli/serie-a-observatory/blob/main/LICENSE",
+    "https://www.legaseriea.it/terms-and-conditions"
+  ],
+  "actions": {
+    "provider_account_created": false,
+    "authenticated_provider_requests_made": false,
+    "provider_api_calls": 0,
+    "raw_source_data_downloaded": false,
+    "source_capture_performed": false,
+    "odds_endpoint_called": false,
+    "supabase_writes": false,
+    "supabase_ddl": false,
+    "protected_outcomes_read": false,
+    "inference_performed": false,
+    "model_code_changed": false,
+    "model_weights_changed": false,
+    "production_pkl_changed": false,
+    "supabase_access_for_this_provider_audit": false
+  }
+}

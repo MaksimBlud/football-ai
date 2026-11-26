@@ -1,0 +1,92 @@
+{
+  "schema_version": "MARKET_ANCHOR_1X2_V2_EXTERNAL_STATS_SOURCE_AUDIT_V1",
+  "source": "api-football-api-sports",
+  "checked_at_utc": "2026-11-20T19:53:31Z",
+  "candidate_status": "HOLD_NO_INTEGRATION",
+  "scope": "Fixture statistics only as lagged inputs for future original V2 forecasts. No odds endpoint or provider quote path is included.",
+  "free_plan": {
+    "price_usd_per_month": 0,
+    "requests_per_day": 100,
+    "credit_card_required": false,
+    "statistics_endpoint_listed": true,
+    "all_endpoints_listed_but_free_seasons_limited": true
+  },
+  "technical_coverage": {
+    "statistics_endpoint_granularity": "one fixture per request",
+    "documented_statistics": [
+      "Shots on Goal",
+      "Shots off Goal",
+      "Shots insidebox",
+      "Shots outsidebox",
+      "Total Shots",
+      "Blocked Shots",
+      "Fouls",
+      "Corner Kicks",
+      "Offsides",
+      "Ball Possession",
+      "Yellow Cards",
+      "Red Cards",
+      "Goalkeeper Saves",
+      "Total passes",
+      "Passes accurate",
+      "Passes %"
+    ],
+    "provider_documented_statistics_update_frequency": "approximately once per minute; documentation says frequency is indicative and not guaranteed",
+    "free_serie_a_2026_27_coverage_verified": false,
+    "complete_original_19_feature_parity_verified": false,
+    "per_stat_source_observation_timestamp_documented": false,
+    "minimum_requests_for_380_fixture_statistics_at_one_request_per_fixture": 380,
+    "minimum_full_quota_days_at_100_requests_per_day": 4,
+    "note": "The 380/4 calculation excludes fixture/coverage calls, retries and any quota use by other work. Local response receipt time plus a SHA-256 archive before a later quote could prove local possession before that quote, but cannot establish upstream first-observation time when that timestamp is not documented."
+  },
+  "rights": {
+    "data_origin_declared_as_partners": true,
+    "direct_data_resale_prohibited": true,
+    "provider_publication_license_granted": false,
+    "user_must_obtain_competition_rights_or_authorizations": true,
+    "commercial_rights_on_competitions_granted": false,
+    "internal_model_use_explicitly_cleared": false,
+    "terms_last_updated": "2025-05-21",
+    "note": "Terms say no publication license is granted for user applications/websites/products and that the provider does not grant commercial rights for covered competitions. No upstream rights chain or written internal-ML permission was verified."
+  },
+  "current_v2_contract": {
+    "current_historical_statistics_source": "existing frozen Football-Data CSV source",
+    "quote_source": "existing saved Serie A 1X2 observations in the existing read-only Supabase ledger",
+    "new_provider_changes_source_contract": true,
+    "new_source_integration_allowed": false,
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "frozen_feature_count": 19,
+    "active_lambda": 0,
+    "shadow_lambda": 1
+  },
+  "evidence_urls": [
+    "https://www.api-football.com/pricing/",
+    "https://www.api-football.com/documentation-v3",
+    "https://www.api-football.com/terms"
+  ],
+  "decision": {
+    "status": "HOLD_NO_INTEGRATION",
+    "reasons": [
+      "The free plan is technically interesting but only provides 100 requests per day and the required statistics endpoint is documented per fixture, not as a season-wide batch.",
+      "Free-plan season availability is limited and current Serie A 2026/27 statistics coverage was not verified.",
+      "The inspected statistics documentation does not establish a per-stat source-observed timestamp; update-frequency text is not a provenance timestamp or SLA.",
+      "The provider's terms do not grant publication or commercial rights for competition data and require users to obtain necessary third-party permissions.",
+      "No explicit upstream rights chain or written permission for the intended internal ML use was obtained.",
+      "The frozen original V2 source contract does not authorize adding this provider."
+    ]
+  },
+  "actions": {
+    "public_official_pages_only": true,
+    "api_key_created": false,
+    "authenticated_api_requests_made": false,
+    "provider_api_calls": 0,
+    "odds_endpoint_called": false,
+    "raw_source_data_downloaded": false,
+    "supabase_writes": false,
+    "supabase_ddl": false,
+    "model_code_changed": false,
+    "model_weights_changed": false,
+    "production_pkl_changed": false,
+    "protected_outcomes_read": false
+  }
+}
