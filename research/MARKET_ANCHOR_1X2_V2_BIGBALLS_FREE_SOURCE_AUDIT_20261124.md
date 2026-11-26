@@ -226,3 +226,23 @@ The Serie A page still shows a 2026-27 standings source timestamp of 2026-11-19 
 The canonical manifest was corrected to record the 2026-10-26 sport-selection date and 2026-11-24 existing-key grace end. Its exact Git blob SHA is repinned in the offline archive gate. The manifest remains `HOLD_NO_INTEGRATION`; automated capture, frozen inference and integration remain false.
 
 No provider account/key, API request, source download, odds request, Supabase access/write/DDL, protected outcome read, feature calculation, inference, refit, production `.pkl` change, schedule change or merge occurred.
+
+
+## 2026-11-26 21:48 UTC — exact OpenAPI endpoint recheck (documentation only)
+
+A fresh review of the official OpenAPI, soccer hub, Serie A authority page and Terms of Service clarifies the candidate's technical coverage but does **not** clear the source.
+
+- OpenAPI describes `GET /v1/matches/{id}/statistics` as **post-match, stored-only** team statistics, persisted hourly after the upstream feed posts following full time. Its `x-bbs-min-plan` is `free`; the response schema includes `corner_kicks`, `yellow_cards` and `red_cards`. Goals remain authoritative from the match linescore. The computed `expected_goals` field is Solo+, but xG is not part of the frozen 19-feature V2 contract.
+- The dedicated Serie A page's capability matrix still says the same statistics endpoint starts at **Edge**, while its FAQ says the route is Free. This first-party conflict is unresolved; no authenticated Free response was reviewed.
+- Free covers the current season only. The page's aggregate all-season team-stat coverage is not a current-2026/27 per-fixture completeness guarantee. Exact 19-feature parity therefore remains unverified.
+- The separate `/v1/stored/matches/{id}/stats` route describes `as_of`/ `fetched_at` using provider ingestion time (`freshness_basis=ingested_at`), not an upstream first-observation or correction timestamp. Do not treat this as proof of when the upstream field first appeared. The main statistics route itself documents no per-field first-seen/correction timestamp.
+- Local response receipt UTC plus SHA-256 could prove that the project possessed the exact response before a later quote, but not when the upstream provider first observed or corrected the field. The endpoint is post-match, so it can only be used as a lagged input to a later fixture, never as a same-match pre-kickoff statistic.
+- The Terms of Service explicitly permit private API-response storage and internal model training/evaluation/backtesting, while prohibiting raw-feed resale and raw-field republication. Upstream field-level source rights and post-termination retention are still not independently established.
+
+**Decision remains HOLD.** No account/key was created; no provider data endpoint was called; no source data was downloaded; no private archive, feature calculation or inference was performed; no Supabase access/write/DDL or paid call occurred. No V2 model, weights, features, lambda, production artifact or workflow schedule was changed.
+
+Official evidence:
+- OpenAPI: https://bigballsdata.com/openapi.json (operation `/v1/matches/{id}/statistics`, `FixtureTeamStatistics`, `/v1/stored/matches/{id}/stats`)
+- Soccer hub: https://bigballsdata.com/soccer-api
+- Serie A capability matrix and FAQ: https://bigballsdata.com/serie-a-api
+- Terms: https://bigballsdata.com/legal/terms

@@ -226,3 +226,58 @@ def test_2026_11_26_official_recheck_preserves_provider_hold_and_current_plan_co
     assert audit["integration_allowed"] is False
     assert audit["automated_capture_authorized"] is False
     assert audit["frozen_inference_authorized"] is False
+
+
+def test_bigballs_20261126_openapi_recheck_keeps_hold():
+    recheck_path = ROOT / "research/source_rights/bigballs_openapi_recheck_20261126.json"
+    recheck = json.loads(recheck_path.read_text(encoding="utf-8"))
+    audit = load_audit()
+
+    endpoint = recheck["endpoint"]
+    provenance = recheck["provenance"]
+    rights = recheck["rights"]
+    authorization = recheck["project_authorization"]
+
+    assert recheck["decision"] == "HOLD_ENDPOINT_PLAN_CONFLICT_AND_PROVENANCE_LIMITS"
+    assert endpoint["path"] == "/v1/matches/{id}/statistics"
+    assert endpoint["openapi_min_plan"] == "free"
+    assert endpoint["dedicated_serie_a_plan_matrix_min_plan"] == "edge"
+    assert endpoint["dedicated_serie_a_faq_claim"] == "free"
+    assert endpoint["plan_entitlement_resolved"] is False
+    assert {"corner_kicks", "yellow_cards", "red_cards"} <= set(endpoint["documented_team_fields"])
+    assert endpoint["route_is_post_match"] is True
+    assert endpoint["route_fetches_upstream_at_request_time"] is False
+    assert endpoint["expected_goals_field_min_plan"] == "solo"
+    assert endpoint["free_plan_history_scope"] == "current season only"
+    assert endpoint["current_serie_a_per_fixture_field_coverage_verified"] is False
+
+    assert provenance["local_response_receipt_time_and_sha256_can_prove_project_possession_before_a_later_quote"] is True
+    assert provenance["upstream_first_observation_timestamp_documented"] is False
+    assert provenance["per_field_correction_timestamp_documented"] is False
+    assert provenance["separate_stored_stats_route_freshness_basis"] == "ingested_at"
+    assert provenance["separate_stored_stats_route_as_of_is_not_upstream_update_time"] is True
+
+    assert rights["private_api_response_storage_permitted_by_terms"] is True
+    assert rights["internal_model_training_evaluation_backtesting_permitted_by_terms"] is True
+    assert rights["raw_feed_resale_or_redistribution_permitted"] is False
+    assert rights["upstream_field_level_rights_independently_verified"] is False
+
+    assert recheck["original_v2"]["candidate_sha256"] == CANDIDATE_SHA
+    assert recheck["original_v2"]["feature_count"] == 19
+    assert recheck["original_v2"]["weight_matrix_shape"] == [20, 2]
+    assert recheck["original_v2"]["active_lambda"] == 0
+    assert recheck["original_v2"]["shadow_lambda"] == 1
+    assert audit["decision"] == "HOLD_NO_INTEGRATION"
+    assert audit["integration_allowed"] is False
+    assert audit["automated_capture_authorized"] is False
+    assert audit["frozen_inference_authorized"] is False
+
+    assert authorization["account_created"] is False
+    assert authorization["api_key_created"] is False
+    assert authorization["provider_data_api_requests"] == 0
+    assert authorization["source_data_downloads"] == 0
+    assert authorization["feature_calculations"] == 0
+    assert authorization["inference_runs"] == 0
+    assert authorization["supabase_writes"] == 0
+    assert authorization["supabase_ddl"] == 0
+    assert authorization["paid_calls"] == 0
