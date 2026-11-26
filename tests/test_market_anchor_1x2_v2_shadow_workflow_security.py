@@ -36,9 +36,9 @@ def test_original_v2_shadow_validation_pins_actions_and_does_not_persist_checkou
 def test_recovery_workflow_keeps_candidate_rebuild_default_denied_and_all_actions_pinned():
     workflow = RECOVERY.read_text(encoding="utf-8")
     assert _action_refs(workflow) == [
-        "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
-        "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
-        "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f",
+        "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
     ]
     checkout = workflow.split("      - uses: actions/checkout@", 1)[1].split(
         "      - uses: actions/setup-python@", 1
