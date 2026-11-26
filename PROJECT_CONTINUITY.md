@@ -1,3 +1,65 @@
+## 2026-11-26 18:52 UTC — independent read-only identity-gate count and live-main exposure recheck
+
+This checkpoint supersedes the earlier statement that the main-reported 120-event feature-input count was wholly unverified. It does **not** claim that the #977 Python gate has been executed against live Supabase, and it does not grant source-capture permission.
+
+### Fresh main and exact current V2 branch
+
+- Default-branch main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; the main `PROJECT_CONTINUITY.md` blob remains `2ce2b5f8a60333f3cc4a0cfdc9c27e7fbdb9741b`, whose top checkpoint is still dated 2026-10-18.
+- The #977 child branch is `research/v2-current-form-identity-audit-restacked-on-976-20261126-run11`, final code HEAD `783f1bfeebbd787ba8fa3ff10362587251952228`, based on #976 HEAD `6f5f29278dc3bddc07ec0501cb8e12d624a664e8`.
+- A further exact-HEAD Source-First isolated validation, run [#45873466753](https://github.com/MaksimBlud/football-ai/actions/runs/45873466753), completed SUCCESS on the same #977 HEAD: Python 3.11 **542 passed** and Python 3.12 **542 passed**; both ran `git diff --exit-code origin/main...HEAD -- '*.pkl'` successfully. The already-observed exact-head Shadow Validation #45873164132 (**215 passed**) and La Liga validation #45873164136 (**6 passed**) also remain successful on this HEAD.
+- #977 remains Draft / open / unmerged / HUMAN-MERGE only. No source capture or live inference was run from the branch.
+
+### Independent live Supabase metadata-only feature-input count
+
+A separate read-only SQL aggregate was run against `public.league_finished_results`. The projection was limited to `match_date, home_team, away_team`; no goals, score, result, settlement, prediction or odds columns were selected. The database declares `match_date` as SQL `date`.
+
+For Serie A season `2026-2027`, dates from 2026-07-01 through 2026-11-26, using the same V2-local alias map (Atalanta BC → Atalanta; plus the existing Serie A aliases):
+
+- Raw metadata rows: **123**.
+- Raw unique directed fixture identities: **123**.
+- Canonical unique directed identities: **120**.
+- Canonical alias-collision groups: **3** (different raw spellings collapse to the same canonical fixture).
+- Reversed home/away conflict groups: **0**.
+- Self-fixture rows: **0**.
+- Rows on/after the UTC cutoff: **0**.
+
+This independently confirms that the current metadata snapshot contains **120 canonical unique primary fixtures**, above the 30-event *feature-input* threshold. It does not prove that the #977 Python function has been run against live Supabase, does not authorize Football-Data access, and does not open the separate prospective target-outcome evaluation gate. Keep the latter closed until 30 eligible prospective forecasts have completed.
+
+### Fresh pre-match-only odds inventory
+
+A read-only aggregate of `public.odds_snapshots` used only `league`, `event_id`, `snapshot_time_utc`, `created_at` and `commence_time_utc`, with strict conditions `snapshot_time_utc < commence_time_utc` and `snapshot_time_utc <= created_at < commence_time_utc`.
+
+- Serie A: **625** total rows; **620** strictly pre-match rows across **63** events; **5** rows fail the strict timing predicate.
+- Future Serie A events with a strict pre-match quote: **0**.
+- Latest strictly pre-match Serie A snapshot: **2026-10-13 14:48:53.042620 UTC**.
+- Across all leagues: **3,966** total rows, **3,915** strict pre-match rows, **327** events, and **51** timing-violating rows.
+
+No odds values or protected match outcomes were selected.
+
+### Critical current-main source-rights and public-artifact blocker
+
+Fresh main code/workflow reads and actual GitHub Actions logs confirm that main is still not protected:
+
+- Main `serie_a_v2_forward_capture.py` imports the Supabase client, reads saved quotes at `fetch_saved_upcoming_serie_a_quotes(...)`, and only then calls `discover_archives(...)`. The original forward path therefore still reads quotes before source discovery on main.
+- Main `.github/workflows/serie-a-v2-current-form-source-capture.yml` still has job-level Supabase secrets, mutable `actions/checkout@v4` / `actions/setup-python@v5`, and an artifact upload guarded by `if: always()`.
+- Main Current-Form Source Capture [run #45853101597](https://github.com/MaksimBlud/football-ai/actions/runs/45853101597) completed SUCCESS and uploaded public-repository artifact #15133684119 (440,661 bytes; digest `sha256:4673115cff4428f8967b5ad500222904f4928e6dd90c36c2abf36fef18ede67e`). Its log reports 19 focused tests passed, 120 metadata-gated events, 120 current-season rows, 10 historical CSVs / 11 source files, and zero paid calls or Supabase writes.
+- Main Current-Form Forward [run #45853224209](https://github.com/MaksimBlud/football-ai/actions/runs/45853224209) completed SUCCESS, verified the source artifact and its successful parent run, but saw **0 saved quotes** and captured **0 V2 shadows**. Its artifact #15133634516 is 441,826 bytes, digest `sha256:814d65d0cc1e5da5a6f060ffdf47add7fa65fbe5df5d9bbc75125b5c4c99f96c`.
+- Scheduled main Free Real-Quote Diagnostic [run #45862042782](https://github.com/MaksimBlud/football-ai/actions/runs/45862042782) completed SUCCESS with 53 tests passed, made **10 public HTTP requests**, saw 0 quotes and 0 feature rows, and uploaded artifact #15138163372 (425,068 bytes; digest `sha256:9659debecfe148f2234b35cee5def7857e0e15dd3847b1af1f15dae92bc67900`).
+- Artifact metadata and logs were inspected only. None of these ZIPs/CSVs was downloaded or opened. The repository is public; these artifacts are therefore not an acceptable private source archive. A successful workflow run is not evidence of provider permission.
+
+### Existing controls; no duplicate implementation
+
+- Root default-deny PR #781 remains open/unmerged at HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, with its 8/8 exact-head CI SUCCESS. It hardens the six live/recovery workflows but is not on main. Do not duplicate its workflow-security implementation.
+- The #977 candidate chain includes the current-form workflow's default-false live-access flag, private-repository guard, delayed Supabase credentials, and success-only artifact upload. Its source-capture helper requires a provider-issued capture grant and private artifact storage. The current Football-Data rights manifest still denies automated capture; no source request is authorized.
+- #977's strict identity implementation remains an offline-tested code change only. Do not treat the metadata-only SQL count as a source-capture or inference run.
+
+### Frozen model and scientific status
+
+The original candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, with the exact original 19-feature order, 20×2 weights, scaler/imputer and training fingerprint. `active_lambda=0`; `shadow_lambda=1` is research-only. No candidate or production artifact was changed. The independent prospective target-outcome evaluation gate remains **0/30 eligible completed forecasts**; no protected 2026/27 target outcomes were read, and no Brier/LogLoss superiority claim is available.
+
+No main update, merge, Supabase write/DDL, paid API request, source ZIP download, protected-outcome read, refit, threshold tuning, production `.pkl` change, promotion, bet, schedule change or other-agent setting change occurred.
+
+
 ## 2026-11-26 — strict current-form identity audit restacked onto frozen candidate chain
 
 A new child PR #977 carries the already-reviewed strict metadata identity implementation from sibling PR #966 onto the current frozen-candidate/security chain ending at #976.
