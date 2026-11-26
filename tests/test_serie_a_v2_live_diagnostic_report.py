@@ -17,6 +17,8 @@ NOW = datetime(2026,10,13,15,1,tzinfo=timezone.utc)
 @pytest.fixture(autouse=True)
 def _allow_synthetic_rights_for_offline_tests(monkeypatch):
     synthetic = lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"}
+    import market_anchor_v2_direct_access as direct_access
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(live_diagnostic, "require_v2_source_capture_access", synthetic)
     monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", synthetic)
