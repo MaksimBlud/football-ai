@@ -245,9 +245,10 @@ def prepare_forward_capture(
 ) -> dict:
     """Only score quotes with a GitHub source ZIP strictly older than the quote.
 
-    A source-before-quote check is necessary but not sufficient for prospective
+    A source-before-snapshot check is necessary but not sufficient for prospective
     admission: frozen incumbent, current-season form and outcome gate still
-    missing. All resulting original-V2 probabilities are diagnostic only.
+    missing. The database created_at clock is validated separately from the
+    bookmaker snapshot_time_utc. All resulting original-V2 probabilities are diagnostic only.
     """
     if as_of_utc.tzinfo is None or as_of_utc.utcoffset() is None:
         raise ValueError("as_of_utc must be timezone-aware")
