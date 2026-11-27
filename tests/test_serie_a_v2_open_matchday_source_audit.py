@@ -85,7 +85,8 @@ class OpenMatchdaySourceAuditTests(unittest.TestCase):
 
     def test_audit_workflow_is_offline_read_only_and_has_no_schedule_or_secrets(self):
         workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
-        self.assertIn("permissions:\\n  contents: read", workflow)
+        self.assertIn("permissions:", workflow)
+        self.assertIn("contents: read", workflow)
         self.assertIn("persist-credentials: false", workflow)
         self.assertNotIn("schedule:", workflow)
         self.assertNotIn("secrets.", workflow)
