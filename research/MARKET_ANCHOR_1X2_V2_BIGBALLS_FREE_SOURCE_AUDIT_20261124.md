@@ -32,6 +32,21 @@ A fresh official-page review at 2026-11-27 08:21:55 UTC found a more specific pl
 
 **Decision remains HOLD_NO_INTEGRATION.** No account, key, API request, download, source archive, feature calculation, inference, Supabase read/write, paid call, or model change was made. The registry evidence does not authorize integration by itself.
 
+## 2026-11-27 — current Serie A page and coverage freshness recheck
+
+A second official-page recheck on 2026-11-27 found that the dedicated [Serie A page](https://bigballsdata.com/serie-a-api) now advertises:
+
+- 4,941 total matches and 4,679 finished games across 13 seasons (2014-15 through 2026-27);
+- 20 clubs represented in the current 2026-27 season;
+- a standings snapshot sourced as of 2026-11-27 06:13 UTC;
+- Free season scope as current season only.
+
+This does **not** clear the source. The same page's plan matrix still lists `/v1/matches/{id}/statistics` as Edge, while its FAQ says the route is Free (with `expected_goals` Solo+); the OpenAPI and endpoint registry also say Free. The required original V2 primitive fields—corners, yellow cards and red cards—depend on this route, so the entitlement conflict is material.
+
+The separate [coverage page](https://bigballsdata.com/coverage) still says its serving snapshot was last refreshed 2026-11-06 and classifies soccer `team_stats` as Partial. The prior reviewed coverage snapshot was 4,210 of 4,591 finished matches (91.7%) across the measured archive; the current Serie A page advertises 4,679 finished games, a difference of 88 that the public pages do not reconcile. Neither figure is current-season per-fixture coverage for the three required card/corner fields.
+
+**Decision remains HOLD_NO_INTEGRATION.** No account/key, API request, download, authenticated Free response, source capture, feature calculation, inference, or Supabase operation was performed. Current-season league coverage is not proof of team-stat coverage or exact 19-feature parity.
+
 ## Provider terms and data rights
 
 The [official Terms of Service](https://bigballsdata.com/legal/terms), effective 2026-08-10, state:
