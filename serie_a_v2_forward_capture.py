@@ -234,7 +234,9 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
         raise ValueError("GitHub artifact storage must return one un-followed HTTP 200")
 
     raw = download.content
-    if not raw or len(raw) > MAX_
+    if not raw or len(raw) > MAX_ZIP_BYTES:
+        raise ValueError("missing or oversized source archive")
+    return raw
 
 def prepare_forward_capture(
     quotes: list[dict], archive_metadata: list[dict], *,
