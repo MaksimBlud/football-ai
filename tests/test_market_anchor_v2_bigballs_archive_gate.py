@@ -281,6 +281,24 @@ def test_receipt_must_follow_the_source_match_kickoff():
         _validate((rights, archive, match_body, statistics_body, None, None))
 
 
+def test_statistics_receipt_must_follow_finished_match_observation():
+    rights, archive, match_body, statistics_body, *_ = _bundle()
+    archive["statistics_received_at_utc"] = "2026-11-10T19:59:59Z"
+    with pytest.raises(
+        ArchiveGateError,
+        match="statistics receipt must follow the finished-match observation",
+    ):
+        _validate((rights, archive, match_body, statistics_body, None, None))
+
+    rights, archive, match_body, statistics_body, *_ = _bundle()
+    archive["statistics_received_at_utc"] = archive["match_received_at_utc"]
+    with pytest.raises(
+        ArchiveGateError,
+        match="statistics receipt must follow the finished-match observation",
+    ):
+        _validate((rights, archive, match_body, statistics_body, None, None))
+
+
 def test_non_serie_a_and_wrong_source_endpoint_are_rejected():
     rights, archive, match_body, statistics_body, match, _ = _bundle()
     match["data"]["league"] = "Premier League"
