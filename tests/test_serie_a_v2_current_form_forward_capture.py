@@ -12,6 +12,8 @@ from serie_a_v2_current_form_forward_capture import (
     SOURCE_WORKFLOW_PATH,
     prepare_forward_capture,
     verify_latest_source_archive,
+    discover_archives,
+    get_archive,
 )
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
@@ -303,6 +305,97 @@ def test_current_form_source_older_than_24h_at_quote_is_blocked():
     assert report["blocked"]["SOURCE_ARCHIVE_TOO_OLD"] == 1
     assert report["rows"][0]["status"] == "SOURCE_ARCHIVE_TOO_OLD"
 
+
+
+def test_current_form_artifact_discovery_defaults_to_denied_before_github_access(monkeypatch):
+    monkeypatch.delenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", raising=False)
+    calls = []
+
+    def forbidden_get(url, **kwargs):
+        calls.append(url)
+        raise AssertionError("GitHub must not be accessed while V2 live access is held")
+
+    with pytest.raises(PermissionError, match="MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true"):
+        discover_archives(token="synthetic-token", get=forbidden_get)
+    assert calls == []
+
+
+def test_current_form_artifact_discovery_rejects_public_repo_before_catalog_read(monkeypatch):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+
+    class Response:
+        url = GITHUB_API
+        status_code = 200
+
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": False}
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        assert url == GITHUB_API
+        return Response()
+
+    with pytest.raises(PermissionError, match="requires the exact GitHub repository to be private"):
+        discover_archives(token="synthetic-token", get=fake_get)
+    assert calls == [GITHUB_API]
+
+
+def test_current_form_source_zip_download_rejects_public_repo_before_artifact_bytes(monkeypatch):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+
+    class Response:
+        url = GITHUB_API
+        status_code = 200
+
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": False}
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        assert url == GITHUB_API
+        return Response()
+
+    with pytest.raises(PermissionError, match="requires the exact GitHub repository to be private"):
+        get_archive(9876, token="synthetic-token", get=fake_get)
+    assert calls == [GITHUB_API]
+
+
+def test_current_form_source_zip_download_checks_private_repo_before_fetching_bytes(monkeypatch):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+    artifact_url = f"{GITHUB_API}/actions/artifacts/9876/zip"
+
+    class RepoResponse:
+        url = GITHUB_API
+        status_code = 200
+
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": True}
+
+    class ArchiveResponse:
+        content = b"synthetic-private-zip"
+
+        def raise_for_status(self):
+            return None
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        if url == GITHUB_API:
+            assert kwargs["allow_redirects"] is False
+            return RepoResponse()
+        assert url == artifact_url
+        return ArchiveResponse()
+
+    assert get_archive(9876, token="synthetic-token", get=fake_get) == b"synthetic-private-zip"
+    assert calls == [GITHUB_API, artifact_url]
 
 def test_unverified_parent_cannot_admit_quote():
     raw, archives = make_archive()
