@@ -282,3 +282,32 @@ def test_bigballs_20261126_openapi_recheck_keeps_hold():
     assert authorization["supabase_writes"] == 0
     assert authorization["supabase_ddl"] == 0
     assert authorization["paid_calls"] == 0
+
+
+def test_2026_11_27_live_serie_a_endpoint_registry_follow_up_keeps_integration_on_hold():
+    audit = load_audit()
+    recheck_path = ROOT / "research/source_rights/bigballs_openapi_recheck_20261126.json"
+    recheck = json.loads(recheck_path.read_text(encoding="utf-8"))
+    follow_up = recheck["follow_up_20261127"]
+    registry = follow_up["league_endpoint_registry"]
+
+    assert registry["page_slug"] == "serie-a-api"
+    assert registry["endpoint_path"] == "/v1/matches/{id}/statistics"
+    assert registry["minimum_plan"] == "free"
+    assert registry["registry_is_described_as_same_registry_enforced_by_gateway"] is True
+    assert follow_up["dedicated_serie_a_capability_matrix_minimum_plan"] == "edge"
+    assert follow_up["dedicated_serie_a_faq_route_claim"] == "free"
+    assert follow_up["authenticated_free_plan_response_reviewed"] is False
+    assert follow_up["provider_api_request_made"] is False
+    assert follow_up["source_download_performed"] is False
+    assert follow_up["decision"] == "HOLD_NO_INTEGRATION"
+
+    assert audit["free_plan"]["league_endpoint_registry_statistics_min_plan"] == "free"
+    assert audit["free_plan"]["endpoint_entitlement_status"] == "HOLD_REGISTRY_FREE_BUT_SERIE_A_MATRIX_EDGE_CONFLICT"
+    assert audit["free_plan"]["endpoint_plan_conflict"] is True
+    assert audit["coverage"]["coverage_page_team_stats_status"] == "PARTIAL"
+    assert audit["coverage"]["current_2026_27_match_level_coverage"] == "UNKNOWN"
+    assert audit["decision"] == "HOLD_NO_INTEGRATION"
+    assert audit["integration_allowed"] is False
+    assert audit["automated_capture_authorized"] is False
+    assert audit["frozen_inference_authorized"] is False
