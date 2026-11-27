@@ -31,7 +31,7 @@ FORBIDDEN = frozenset((
 ))
 MARKET_KEYS = (
     "event_id", "league", "home_team", "away_team", "commence_time_utc",
-    "snapshot_time_utc", "home_odds", "draw_odds", "away_odds",
+    "snapshot_time_utc", "created_at", "home_odds", "draw_odds", "away_odds",
 )
 FEATURE_KEYS = (
     "event_id", "home_team", "away_team", "commence_time_utc",
