@@ -392,6 +392,8 @@ def _has_external_io(text: str) -> bool:
 OFFLINE_ACTIONS = {
     "actions/checkout@v4",
     "actions/setup-python@v5",
+    "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+    "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
 }
 
 
@@ -959,3 +961,13 @@ def test_live_v2_workflows_pin_actions_and_disable_checkout_credentials():
                 assert re.fullmatch(r"actions/[^@]+@[0-9a-f]{40}", action_ref), (
                     f"{path}: mutable or unpinned GitHub Action reference: {action_ref}"
                 )
+
+
+
+def test_pinned_checkout_and_setup_python_are_offline_allowlisted():
+    assert not _has_unapproved_action(
+        "      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+    )
+    assert not _has_unapproved_action(
+        "      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+    )
