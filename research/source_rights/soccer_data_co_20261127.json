@@ -1,0 +1,91 @@
+{
+  "schema_version": "MARKET_ANCHOR_V2_SOURCE_RIGHTS_AUDIT_V1",
+  "source_id": "soccer_data_co",
+  "provider": "Soccer Data",
+  "reviewed_at_utc": "2026-11-27",
+  "official_urls": {
+    "home": "https://soccer-data.co/",
+    "pricing": "https://soccer-data.co/pricing",
+    "terms": "https://soccer-data.co/terms",
+    "docs": "https://soccer-data.co/docs",
+    "coverage": "https://soccer-data.co/docs/concepts/coverage",
+    "match_stats": "https://soccer-data.co/docs/reference/matches/stats"
+  },
+  "original_v2": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_count": 19,
+    "weight_matrix_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "outcome_read_before_gate": false,
+    "outcome_read_gate_required_completed_primary_events": 30,
+    "eligible_completed_primary_forecasts_observed": 0,
+    "outcome_read_gate_open": false
+  },
+  "free_plan": {
+    "price_usd_per_month": 0,
+    "requests_per_day": 50,
+    "all_stats_endpoints_claimed": true,
+    "current_season_only": true,
+    "current_season_cache_minutes": 5,
+    "pre_match_odds_available": false,
+    "live_odds_available": false,
+    "serie_a_2026_27_field_coverage_authenticated": false,
+    "per_match_stats_endpoint": true,
+    "bulk_match_stats_endpoint_documented": false
+  },
+  "documented_stats_fields": {
+    "goals_from_match_result": true,
+    "corner_kicks": true,
+    "yellow_cards": true,
+    "red_cards": true,
+    "team_stats_endpoint": true,
+    "exact_frozen_v2_semantics_verified": false,
+    "per_field_coverage_verified": false
+  },
+  "rights": {
+    "api_operator_claims_data_owned_or_licensed_from_third_parties": true,
+    "upstream_provider_identity_disclosed": false,
+    "upstream_rights_confirmed": false,
+    "non_exclusive_non_transferable_data_license": true,
+    "cache_and_store_permitted_while_account_and_plan_active": true,
+    "display_in_own_websites_apps_services_permitted_while_active": true,
+    "raw_feed_redistribution_permitted": false,
+    "license_ends_when_account_or_terms_end": true,
+    "retention_after_account_termination_permitted": false,
+    "internal_model_inference_explicitly_permitted": false,
+    "model_training_explicitly_permitted": false,
+    "private_archive_scope_explicitly_documented": false
+  },
+  "provenance": {
+    "api_source_observation_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "local_utc_receipt_time_required": true,
+    "raw_response_sha256_required": true,
+    "source_before_quote_proven": false,
+    "source_before_quote_can_be_proven_by_future_local_capture": true,
+    "source_side_first_seen_or_correction_history_proven": false
+  },
+  "decision": "HOLD_NO_INTEGRATION",
+  "integration_authorized": false,
+  "provider_api_requests_made": 0,
+  "api_key_created": false,
+  "source_downloads": 0,
+  "raw_archive_created": false,
+  "supabase_accessed": false,
+  "supabase_writes": 0,
+  "supabase_ddl": 0,
+  "feature_calculation_performed": false,
+  "inference_performed": false,
+  "target_outcomes_read": false,
+  "paid_provider_calls": 0,
+  "paid_odds_calls": 0,
+  "production_pkl_changed": false,
+  "original_v2_contract_changed": false,
+  "reason": "The Free plan claims 50 requests/day, all statistics endpoints and current-season-only access, while pre-match/live odds are excluded. The match-stats endpoint documents corners, yellow cards and red cards, but coverage is competition/season-dependent and no authenticated Serie A 2026/27 field-level response was inspected. Terms allow caching/storing and displaying data only while the account and plan remain active; the licence ends when the account or terms end and raw redistribution is forbidden. The terms do not explicitly grant internal ML inference/training, identify upstream providers, or document private raw archive retention after termination. The stats endpoint documents no source-observation or per-field correction timestamp. No account, key, API request, download, feature calculation, inference or Supabase access was performed. Keep HOLD until written rights/use/retention clarification and a minimal owner-authorized Free-tier field-coverage test can be completed with private raw bytes, local UTC receipt time and SHA-256."
+}
