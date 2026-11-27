@@ -1,5 +1,62 @@
 # Football AI — Project Continuity
 
+## 2026-11-27 21:52 UTC — superseding exact-head original V2 checkpoint
+
+This checkpoint supersedes the earlier same-day runtime/PR inventory below. Historical records are retained; they are not permission to continue live source access.
+
+- Fresh `main`: `40887ebb215730190d7a6c7a1693373ec4afcdfc`; no main update or merge occurred.
+- GitHub repository metadata confirms `MaksimBlud/football-ai` is still `private=false`, `visibility=public`. Raw source artifacts must not be published there.
+- Frozen original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`, 3,799 training rows, exact 19-feature order and 20×2 weights, `active_lambda=0`, `shadow_lambda=1`; historical stability gate FAILED and promotion remains disabled.
+
+### Exact open V2 chain and CI
+
+- [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable at `8059553b6b0db4a76b94989bddbc0e4a065aa90a`; exact-head CI 8/8 SUCCESS. It is the root workflow hold and has not been merged.
+- [PR #984](https://github.com/MaksimBlud/football-ai/pull/984) remains OPEN / Draft at `a75153905cf77c7d63faec85db1e453f288430bc`; Python 3.11/3.12 each passed 104 regressions with the pinned numerical runtime.
+- [PR #987](https://github.com/MaksimBlud/football-ai/pull/987) remains OPEN / Draft at `09d0c8f9b313ecbd68d4e09489b253a6a0895a60`; exact run [#46060428677](https://github.com/MaksimBlud/football-ai/actions/runs/46060428677) passed both Python matrix jobs. It adds `created_at` to the separate saved-quote projection without changing inference `MARKET_KEYS`.
+- [PR #988](https://github.com/MaksimBlud/football-ai/pull/988) remains OPEN / Draft at `6f520b0f76571f070f6b2ee56d24db62b690a372`; exact run [#46067342982](https://github.com/MaksimBlud/football-ai/actions/runs/46067342982) passed both Python matrix jobs. The shared owner-flag/private-repository guard now runs inside the saved-quote reader before Supabase table access.
+- [PR #989](https://github.com/MaksimBlud/football-ai/pull/989) is a child of #988, OPEN / Draft / mergeable at exact HEAD `f3488cb8328b263d93d271cf9e75c410839dfdcf`, base exactly `6f520b0f76571f070f6b2ee56d24db62b690a372`. Exact validation [run #46072984001](https://github.com/MaksimBlud/football-ai/actions/runs/46072984001) completed SUCCESS: Python 3.11 and 3.12 jobs both passed compile, the expanded original/current-form V2 regression suite, and the production-`.pkl` diff guard.
+  - Finding: current-form forward `discover_archives()` and `get_archive()` ran before the shared guarded quote reader. Direct callers could therefore inspect/download source artifacts while the repo was public if the owner flag were manually set.
+  - Fix: require the shared owner live-access + exact-private-repository guard before artifact discovery and again at the source-ZIP byte-download boundary.
+  - Regressions prove default-deny before GitHub access, public-repository rejection before artifact catalog/ZIP access, and the private-repository positive call order.
+  - The isolated validation workflow now explicitly includes the current-form forward module and test file, so this exact change is actually exercised by the Python 3.11/3.12 CI.
+- Chain order is `#781 → #980 → #981 → #982 → #983 → #984 → #987 → #988 → #989`. HUMAN-MERGE only; none of these PRs was merged in this checkpoint.
+
+### Latest actual forward workflow evidence
+
+- Original V2 Forward-Only Preview [run #46046608625](https://github.com/MaksimBlud/football-ai/actions/runs/46046608625) completed SUCCESS on main: 71 tests passed, historical source attestation passed, but no eligible saved quotes and no forecasts.
+- Current-Form Forward-Only Preview [run #46047607281](https://github.com/MaksimBlud/football-ai/actions/runs/46047607281) completed SUCCESS on main: 53 tests passed, no saved quote rows, no current-form shadow captures and no target-outcome reads. Its public artifact is not an authorized private source archive.
+- Current-Form Source Capture [run #46026789681](https://github.com/MaksimBlud/football-ai/actions/runs/46026789681) completed SUCCESS with 120 canonical completed-event identities in the feature-input metadata gate and 11 captured source files. This is historical runtime evidence only; Football-Data automated AI-use rights remain HOLD under #958 and the artifact was public.
+- Free Real-Quote Diagnostic [run #46034615245](https://github.com/MaksimBlud/football-ai/actions/runs/46034615245) completed SUCCESS with 10 public-source HTTP requests but zero quoted fixtures. A zero count of late source observations is not proof of source-before-quote when no quote exists.
+
+### Fresh read-only pre-match odds inventory
+
+Read-only aggregate from `public.odds_snapshots`; selected only league, event identity and quote/kickoff/persistence timestamps. No score, result, settlement or prediction-outcome fields were queried.
+
+| League | Rows | Valid persisted pre-match rows | Future valid rows |
+|---|---:|---:|---:|
+| Bundesliga | 404 | 394 | 0 |
+| EPL | 1,151 | 1,135 | 0 |
+| Eredivisie | 412 | 410 | 0 |
+| La Liga | 806 | 798 | 0 |
+| Ligue 1 | 394 | 387 | 0 |
+| Primeira Liga | 9 | 9 | 0 |
+| RPL | 156 | 153 | 0 |
+| Serie A | 625 | 620 | 0 |
+| Turkey Super Lig | 9 | 9 | 0 |
+| **Total** | **3,966** | **3,915** | **0** |
+
+The persistence-time predicate is `snapshot_time_utc <= created_at < commence_time_utc`. The source-before-quote requirement is separate and stricter: the verified source observation/archive and authenticated successful parent run must complete before `snapshot_time_utc`. A compact chronology is `source_observed_at_utc <= artifact_created_at_utc <= parent_completed_at_utc < snapshot_time_utc <= quote_row_created_at_utc < kickoff_utc`. The latest saved Serie A snapshot remains `2026-10-13T14:48:53.042620Z`. No league has a future event with a strictly admissible saved quote.
+
+### Safety and next work
+
+- Repository is still public, so the owner/private-storage gate is not satisfied. PR #781 remains unmerged; existing main workflows can continue to run until the human merge, so do not treat the hold as active on main yet.
+- Provider rights remain unresolved; no new provider account/key/API request/download is authorized. Existing public-source capture artifacts are not permission to reuse or redistribute their bytes.
+- No Supabase writes/DDL, paid API calls, production `.pkl` changes, candidate/feature/weight/scaler/imputer/lambda changes, protected target-outcome reads, bets, promotion, schedule changes or other-agent setting changes.
+- Prospective outcome-read gate remains CLOSED until 30 eligible prospective forecasts from the preregistered cohort have completed. Only then may independent Brier/LogLoss be computed against the de-vigged market; no threshold tuning or refit.
+
+---
+
+
 
 ## 2026-11-27 — Original MARKET_ANCHOR_1X2_V2: current runtime evidence and fail-closed status
 
@@ -40,7 +97,7 @@
 
 ### Fresh read-only pre-match market inventory
 
-A read-only aggregate of `public.odds_snapshots` used only league, event ID and timestamps, with strict chronology `snapshot_time_utc < created_at < commence_time_utc`. It found **0 future events with a strict pre-match quote across all queried leagues**. Serie A: 625 total rows, 620 strict rows, 63 distinct events; latest strict snapshot `2026-10-13T14:48:53.042620Z`. No result or settlement fields were queried. This explains why the recent source/forward runs created no prospective forecasts.
+A read-only aggregate of `public.odds_snapshots` used only league, event ID and timestamps, with persistence chronology `snapshot_time_utc <= created_at < commence_time_utc`. It found **0 future events with a strict pre-match quote across all queried leagues**. Serie A: 625 total rows, 620 strict rows, 63 distinct events; latest strict snapshot `2026-10-13T14:48:53.042620Z`. No result or settlement fields were queried. This explains why the recent source/forward runs created no prospective forecasts.
 
 The 120-event current-form input gate is separate from the outcome-read gate. The latter remains CLOSED until 30 eligible prospective forecasts have completed; target outcomes must not be read before that gate.
 
