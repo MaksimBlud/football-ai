@@ -25,7 +25,7 @@ RIGHTS_MANIFEST_PATH = (
     / "source_rights"
     / "bigballs_sports_data_20261124.json"
 )
-RIGHTS_MANIFEST_GIT_BLOB_SHA1 = "a32789b60288e1d2525418c206c6b754af470746"
+RIGHTS_MANIFEST_GIT_BLOB_SHA1 = "b212de86f613216d28e6324e7cccafd3046abd60"
 
 
 def _git_blob_sha1(raw: bytes) -> str:
