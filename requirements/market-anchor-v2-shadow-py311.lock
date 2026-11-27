@@ -1,0 +1,23 @@
+# Exact Python 3.11 environment observed on successful original V2 shadow run
+# GitHub Actions run: 45931922377, commit: d7bc9b795071f04d8ff5f4e8280720abb415c0c7
+# All direct and resolved transitive distributions are pinned for repeatable CI.
+certifi==2026.11.20
+charset-normalizer==3.5.3
+cloudpickle==3.1.3
+idna==3.20
+iniconfig==2.3.1
+joblib==1.6.0
+narwhals==2.29.0
+numpy==2.4.6
+packaging==26.4
+pandas==3.1.1
+pluggy==1.7.0
+pygments==2.21.0
+pytest==9.2.0
+python-dateutil==4.0.0
+requests==2.34.2
+scikit-learn==1.9.1
+scipy==1.17.1
+threadpoolctl==3.8.0
+tzdata==2026.6
+urllib3==2.8.0

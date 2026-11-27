@@ -7,6 +7,8 @@ on:
       - "experiments/market_anchor_1x2_v2_protocol.json"
       - "tests/test_market_anchor_1x2_v2_shadow.py"
       - "tests/test_market_anchor_1x2_v2_shadow_workflow_security.py"
+      - "tests/test_market_anchor_v2_dependency_lock.py"
+      - "requirements/market-anchor-v2-shadow-py311.lock"
       - "PROJECT_CONTINUITY.md"
       - ".github/workflows/market-anchor-1x2-v2-shadow-validation.yml"
       - "market_anchor_1x2_v1.py"
@@ -28,12 +30,19 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548
         with:
           python-version: "3.11"
-      - name: Install test dependencies
-        run: pip install numpy pandas scipy scikit-learn requests pytest
-      - name: Compile frozen V2 contract
-        run: python -m py_compile market_anchor_1x2_v2_shadow.py tests/test_market_anchor_1x2_v2_shadow.py
-      - name: Run V2 regression and workflow security tests
-        run: pytest -q tests/test_market_anchor_1x2_v2_shadow.py tests/test_market_anchor_1x2_v2_shadow_workflow_security.py
+      - name: Install exact frozen V2 shadow validation environment
+        run: |
+          python -m pip install -r requirements/market-anchor-v2-shadow-py311.lock
+          python -m pip check
+      - name: Compile frozen V2 contract and dependency lock regression
+        run: |
+          python -m py_compile market_anchor_1x2_v2_shadow.py tests/test_market_anchor_1x2_v2_shadow.py tests/test_market_anchor_v2_dependency_lock.py
+      - name: Run V2 regression, workflow security, and dependency lock tests
+        run: |
+          python -m pytest -q \
+            tests/test_market_anchor_1x2_v2_shadow.py \
+            tests/test_market_anchor_1x2_v2_shadow_workflow_security.py \
+            tests/test_market_anchor_v2_dependency_lock.py
       - name: Assert no production model artifact changed
         shell: bash
         run: |
