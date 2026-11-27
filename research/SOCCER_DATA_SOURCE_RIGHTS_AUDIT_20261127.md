@@ -10,7 +10,9 @@ Soccer Data is a new current-season source candidate worth recording. Its public
 
 This could only be a **lagged current-form source for future Serie A fixtures**, not a replacement for the frozen 2016/17–2025/26 V2 training source. The docs say Serie A data begins in 2020/21 generally, but Free access is limited to the current season. No authenticated response was inspected, so Serie A 2026/27 field coverage and exact definitions remain unverified.
 
-The source is **not approved** for V2 ingestion. The Terms permit caching/storing and displaying data while the account and plan remain active, but the licence ends when the account or Terms end. They prohibit raw-feed redistribution, do not explicitly grant internal model inference or training, and do not identify the upstream data providers. The stats endpoint does not document a per-match source-observation or per-field correction timestamp.
+The source is **not approved** for V2 ingestion.
+
+The frozen evaluation rule requires **30 completed primary prospective forecasts** before any target-outcome read. At this audit checkpoint, **0 eligible completed primary forecasts are recorded and the outcome-read gate is CLOSED**. The `30` value is the required threshold, not an observed event count. No protected 2026/27 outcome was read. The Terms permit caching/storing and displaying data while the account and plan remain active, but the licence ends when the account or Terms end. They prohibit raw-feed redistribution, do not explicitly grant internal model inference or training, and do not identify the upstream data providers. The stats endpoint does not document a per-match source-observation or per-field correction timestamp.
 
 ## Official pages reviewed
 
