@@ -6229,3 +6229,38 @@ A future restart requires genuinely new prospectively frozen information or a ne
 - Main Original Forward run [#46046608625](https://github.com/MaksimBlud/football-ai/actions/runs/46046608625) remained source-only: 71 tests passed, source ZIP SHA verified, 0 quotes and 0 previews. Current-Form Forward [#46047607281](https://github.com/MaksimBlud/football-ai/actions/runs/46047607281) verified its source parent and SHA, but also had 0 quotes / 0 shadow forecasts and uploaded a 441,814-byte Actions artifact containing the `current_form_sources_used` path. The repository is public; do not download/re-publish raw source bytes. Root hold #781 gates future live steps/uploads but does not retroactively remove existing artifacts.
 - Supabase Security Advisor (2026-11-27 19:59 UTC) still reports 5 public tables with RLS disabled and 4 tables with RLS enabled but no policies. No Supabase write/DDL was performed. See the advisor remediation links in the run report; do not enable RLS without reviewing policies.
 - No model, 19-feature order, weights, scaler/imputer, candidate SHA, `active_lambda=0`, `shadow_lambda=1`, NO_BET, frozen gates, production `.pkl`, schedule, other agent, or main branch changed. No paid calls, target-outcome reads, or merge.
+
+## 2026-11-27 — persisted quote timestamp and direct-reader access follow-up
+
+### Original forward quote persistence
+
+PR [#987](https://github.com/MaksimBlud/football-ai/pull/987) is stacked on the original forward runtime chain and adds `created_at` only to the read-only saved-quote projection (`SAVED_QUOTE_KEYS`); the frozen inference `MARKET_KEYS` contract remains unchanged. Each row now requires an offset-aware database persistence timestamp satisfying:
+
+- `snapshot_time_utc <= created_at <= capture_clock`;
+- `created_at < kickoff`.
+
+Exact final HEAD: `09d0c8f9b313ecbd68d4e09489b253a6a0895a60`; isolated Python 3.11/3.12 CI run [#46060428677](https://github.com/MaksimBlud/football-ai/actions/runs/46060428677) passed 108 tests in each environment and the production `.pkl` guard. The first attempt was rejected because widening the shared inference key tuple broke six frozen-shadow fixtures; the final patch keeps that tuple unchanged.
+
+Read-only Supabase catalog audit found `odds_snapshots.created_at` has database default `now()`, no table trigger, and the current Serie A writer's `DB_COLUMNS` omits `created_at`, so its normal upsert relies on the database default. This is persistence-time evidence, not an upstream bookmaker/source timestamp or cryptographic proof.
+
+### Direct frozen-shadow reader bypass closed in a separate draft
+
+A code-path audit found `serie_a_v2_frozen_shadow_preview.py` could call `fetch_saved_upcoming_serie_a_quotes()` directly without the owner-controlled live-access flag or exact-private-repository guard. This bypassed the workflow/forward-CLI hold for direct invocations.
+
+Draft PR [#988](https://github.com/MaksimBlud/football-ai/pull/988), child of #987, extracts the existing V2 guard into `serie_a_v2_live_access_guard.py` and enforces it inside the shared saved-quote reader before any Supabase query. Exact HEAD `6f520b0f76571f070f6b2ee56d24db62b690a372`; isolated validation [#46067342982](https://github.com/MaksimBlud/football-ai/actions/runs/46067342982) completed successfully on Python 3.11 and 3.12, including regression and production `.pkl` guard steps. It remains Draft / HUMAN-MERGE only.
+
+### Fresh pre-match-only database evidence
+
+Read-only query of `odds_snapshots` returned 3,966 rows across nine leagues and **zero future rows**; strict future quote count was also zero in every league. Latest saved snapshot remains 2026-10-13 14:48:53 UTC (Serie A), 2026-10-09 15:25:57 UTC (EPL), and 2026-09-11 for the other listed leagues.
+
+Read-only metadata query for season `2026-2027` returned 123 Serie A fixture identities; all 123 have NULL `source_updated_at_utc` while having `persisted_at_utc`. Therefore DB persistence time does not establish upstream publication/update time. La Liga metadata had 134 rows with non-NULL source update timestamps, but this does not authorize mixing its cohort into the Serie A V2 protocol.
+
+The prospective outcome gate remains CLOSED at 0/30 eligible completed primary events. No target outcomes were read.
+
+### Security and integration state
+
+Supabase Security Advisor still reports five public tables with RLS disabled and four RLS-enabled tables without policies. No remediation was applied because enabling RLS without reviewed policies can break application access.
+
+The original integration sequence remains #781 -> #980 -> #981 -> #982 -> #983 -> #984 -> #987 -> #988. All are HUMAN-MERGE; no merge or main update was performed. The public main SHA remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+
+No paid provider call, Supabase write/DDL, production `.pkl` change, model/feature/weight change, protected outcome read, schedule change, other-agent setting change, betting, or promotion occurred.
