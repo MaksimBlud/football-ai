@@ -284,6 +284,40 @@ def test_bigballs_20261126_openapi_recheck_keeps_hold():
     assert authorization["paid_calls"] == 0
 
 
+def test_2026_11_27_current_serie_a_page_recheck_keeps_coverage_and_entitlement_hold():
+    recheck = json.loads(
+        (ROOT / "research/source_rights/bigballs_openapi_recheck_20261126.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    page = recheck["follow_up_20261127_current_serie_a_page"]
+    coverage = page["coverage_page"]
+
+    assert page["current_season"] == "2026-27"
+    assert page["season_count"] == 13
+    assert page["total_matches_advertised"] == 4941
+    assert page["finished_games_advertised"] == 4679
+    assert page["current_season_clubs_represented"] == 20
+    assert page["standings_source_as_of_utc"] == "2026-11-27T06:13:00Z"
+    assert page["free_plan_scope_on_serie_a_page"] == "current season only"
+    assert page["statistics_plan_matrix_minimum_plan"] == "edge"
+    assert page["statistics_faq_route_claim"].startswith("free")
+    assert page["openapi_and_endpoint_registry_minimum_plan"] == "free"
+    assert page["endpoint_plan_conflict"] is True
+    assert coverage["last_refreshed"] == "2026-11-06"
+    assert coverage["soccer_team_stats_status"] == "partial"
+    assert coverage["current_2026_27_per_fixture_field_coverage"] == "unknown"
+    assert coverage["prior_reviewed_coverage_snapshot"]["matches_with_team_stats"] == 4210
+    assert coverage["finished_match_count_difference_vs_current_serie_a_page"] == 88
+    assert coverage["difference_reconciled_by_public_docs"] is False
+    assert page["provider_api_request_made"] is False
+    assert page["source_download_performed"] is False
+    assert page["authenticated_free_response_reviewed"] is False
+    assert page["integration_authorized"] is False
+    assert page["decision"] == "HOLD_NO_INTEGRATION"
+    assert recheck["decision"] == "HOLD_ENDPOINT_PLAN_CONFLICT_AND_PROVENANCE_LIMITS"
+
+
 def test_2026_11_27_live_serie_a_endpoint_registry_follow_up_keeps_integration_on_hold():
     audit = load_audit()
     recheck_path = ROOT / "research/source_rights/bigballs_openapi_recheck_20261126.json"
