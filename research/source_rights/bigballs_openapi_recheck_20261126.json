@@ -1,0 +1,156 @@
+{
+  "schema_version": "MARKET_ANCHOR_V2_SOURCE_RIGHTS_RECHECK_V1",
+  "provider": "Big Balls Sports Data",
+  "reviewed_at_utc": "2026-11-26T21:48:06Z",
+  "decision": "HOLD_ENDPOINT_PLAN_CONFLICT_AND_PROVENANCE_LIMITS",
+  "official_sources": {
+    "openapi": "https://bigballsdata.com/openapi.json",
+    "soccer_api": "https://bigballsdata.com/soccer-api",
+    "serie_a_page": "https://bigballsdata.com/serie-a-api",
+    "terms": "https://bigballsdata.com/legal/terms"
+  },
+  "endpoint": {
+    "path": "/v1/matches/{id}/statistics",
+    "description": "Per-team post-match team statistics; stored-only; provider says upstream posts after full time and persists hourly.",
+    "openapi_min_plan": "free",
+    "dedicated_serie_a_plan_matrix_min_plan": "edge",
+    "dedicated_serie_a_faq_claim": "free",
+    "plan_entitlement_resolved": false,
+    "documented_team_fields": [
+      "corner_kicks",
+      "yellow_cards",
+      "red_cards",
+      "shots_on_target",
+      "total_shots",
+      "fouls",
+      "ball_possession",
+      "total_passes",
+      "accurate_passes"
+    ],
+    "goals_source": "match linescore; statistics endpoint description says linescore remains authoritative for goals",
+    "expected_goals_field_min_plan": "solo",
+    "free_plan_history_scope": "current season only",
+    "route_is_post_match": true,
+    "route_fetches_upstream_at_request_time": false,
+    "provider_ingestion_cadence": "hourly",
+    "upstream_post_full_time_delay_approx_minutes": 30,
+    "current_serie_a_per_fixture_field_coverage_verified": false
+  },
+  "provenance": {
+    "local_response_receipt_time_and_sha256_can_prove_project_possession_before_a_later_quote": true,
+    "upstream_first_observation_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "post_match_corrections_possible": true,
+    "separate_stored_stats_route_freshness_basis": "ingested_at",
+    "separate_stored_stats_route_as_of_is_not_upstream_update_time": true,
+    "statistics_endpoint_per_field_fetched_at_documented": false,
+    "provider_field_level_upstream_source_identity_disclosed": false
+  },
+  "rights": {
+    "private_api_response_storage_permitted_by_terms": true,
+    "internal_model_training_evaluation_backtesting_permitted_by_terms": true,
+    "raw_feed_resale_or_redistribution_permitted": false,
+    "raw_field_republication_permitted": false,
+    "upstream_field_level_rights_independently_verified": false,
+    "retention_after_account_termination_explicitly_defined": false
+  },
+  "original_v2": {
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "feature_count": 19,
+    "weight_matrix_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_lambda": 1,
+    "exact_feature_parity_verified": false
+  },
+  "project_authorization": {
+    "account_created": false,
+    "api_key_created": false,
+    "provider_data_api_requests": 0,
+    "source_data_downloads": 0,
+    "private_archive_created": false,
+    "feature_calculations": 0,
+    "inference_runs": 0,
+    "supabase_reads_for_provider_audit": 0,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "paid_calls": 0
+  },
+  "hold_reasons": [
+    "OpenAPI x-bbs-min-plan and endpoint description say Free, while the dedicated Serie A capability matrix says Edge; the Serie A FAQ says Free. No authenticated Free-plan response was reviewed.",
+    "The route is post-match and stored-only. It can only supply lagged inputs to a later fixture after a separately authorized capture.",
+    "The provider documents hourly persistence but does not document per-match upstream first-observation or per-field correction timestamps. Local receipt time and SHA-256 prove project possession before a later quote, not upstream first observation.",
+    "Current-season per-fixture completeness for corners, yellow cards and red cards is not verified; aggregate all-season coverage is not a current-season guarantee.",
+    "The provider's terms permit private storage and internal model use but prohibit raw-feed redistribution; upstream field-level rights and retention after account termination remain unresolved.",
+    "The project has no approved private archive destination for this provider. No account, key, API call, download, feature build or inference is authorized."
+  ],
+  "follow_up_20261127": {
+    "reviewed_at_utc": "2026-11-27T08:21:55Z",
+    "official_sources": {
+      "serie_a_page": "https://bigballsdata.com/serie-a-api",
+      "league_endpoint_registry": "https://bigballsdata.com/league-endpoints.json",
+      "coverage_page": "https://bigballsdata.com/coverage",
+      "terms": "https://bigballsdata.com/legal/terms"
+    },
+    "serie_a_page_checked_at_utc": "2026-11-27T06:42:00Z",
+    "league_endpoint_registry": {
+      "page_slug": "serie-a-api",
+      "endpoint_path": "/v1/matches/{id}/statistics",
+      "minimum_plan": "free",
+      "description": "Per-team post-match team statistics (soccer)",
+      "registry_is_described_as_same_registry_enforced_by_gateway": true
+    },
+    "dedicated_serie_a_capability_matrix_minimum_plan": "edge",
+    "dedicated_serie_a_faq_route_claim": "free",
+    "coverage_page": {
+      "last_refreshed": "2026-11-06",
+      "soccer_team_stats_status": "partial",
+      "current_2026_27_per_fixture_field_coverage": "unknown"
+    },
+    "resolution": "PUBLIC_ENDPOINT_REGISTRY_SAYS_FREE_BUT_DEDICATED_CAPABILITY_MATRIX_SAYS_EDGE",
+    "authenticated_free_plan_response_reviewed": false,
+    "provider_api_request_made": false,
+    "source_download_performed": false,
+    "integration_authorized": false,
+    "decision": "HOLD_NO_INTEGRATION",
+    "reason": "The registry is stronger than a generic marketing summary and is described as the gateway-enforced catalogue, but the dedicated Serie A page still contains a conflicting capability matrix. No authenticated Free response or provider clarification is available; upstream field-level rights and per-match first-observation/correction timestamp semantics also remain unresolved."
+  },
+  "follow_up_20261127_current_serie_a_page": {
+    "checked_on": "2026-11-27",
+    "official_page": "https://bigballsdata.com/serie-a-api",
+    "current_season": "2026-27",
+    "season_count": 13,
+    "season_range": "2014-15 through 2026-27",
+    "total_matches_advertised": 4941,
+    "finished_games_advertised": 4679,
+    "current_season_clubs_represented": 20,
+    "standings_source_as_of_utc": "2026-11-27T06:13:00Z",
+    "free_plan_scope_on_serie_a_page": "current season only",
+    "statistics_endpoint": "/v1/matches/{id}/statistics",
+    "statistics_plan_matrix_minimum_plan": "edge",
+    "statistics_faq_route_claim": "free; expected_goals field Solo+",
+    "openapi_and_endpoint_registry_minimum_plan": "free",
+    "endpoint_plan_conflict": true,
+    "coverage_page": {
+      "url": "https://bigballsdata.com/coverage",
+      "last_refreshed": "2026-11-06",
+      "soccer_team_stats_status": "partial",
+      "current_2026_27_per_fixture_field_coverage": "unknown",
+      "prior_reviewed_coverage_snapshot": {
+        "finished_matches": 4591,
+        "matches_with_team_stats": 4210,
+        "team_stats_coverage": 0.917
+      },
+      "finished_match_count_difference_vs_current_serie_a_page": 88,
+      "difference_reconciled_by_public_docs": false
+    },
+    "provider_api_request_made": false,
+    "source_download_performed": false,
+    "authenticated_free_response_reviewed": false,
+    "integration_authorized": false,
+    "decision": "HOLD_NO_INTEGRATION",
+    "reason": "The dedicated page now shows current 2026-27 league coverage and current-season Free scope, but the required match-statistics route remains Edge in its capability matrix and Free in its FAQ/OpenAPI/endpoint registry. The coverage page is stale and team_stats is only Partial; no current-season per-fixture corner/yellow/red completeness is published. The difference between the current Serie A page's 4,679 finished games and the prior 4,591 coverage snapshot is not reconciled. Do not infer Free access or exact 19-feature parity."
+  }
+}
