@@ -215,3 +215,41 @@ The latest Serie A metadata is unchanged from the 2026-11-24 checkpoint: **120 r
 The newer commit confirms that the repository itself refreshed on November 25, but it does not make the latest Serie A completed-match date newer than November 23. The README still states non-commercial-only use; the upstream disclaimer still leaves provider rights with each publisher; the Serie A source list still includes football-data.co.uk; and the FotMob corner-split lineage remains without per-field source/correction timestamps or a matching entry in the provider-terms table.
 
 **Disposition remains HOLD_NO_INTEGRATION.** The exact commit and build timestamp could support project-local source-before-quote evidence only after written rights and private storage are approved. They do not establish upstream first-observed chronology, complete 19-feature coverage, or permission for private ML retention/training/evaluation. No CSV download, source capture, quote read, Supabase access/write/DDL, feature build, inference, outcome read, training/refit, production artifact change, schedule change, main update or merge occurred.
+
+
+## Latest upstream checkpoint — 2026-11-27 05:57 UTC (metadata only)
+
+A fresh GitHub metadata read observed the following current upstream state:
+
+- Current upstream `master` commit: `381875f14c1e8073d866aacb29a868e31840e37b`.
+- Commit message: `Daily data refresh 2026-11-26`.
+- Commit time: `2026-11-26T07:50:10Z`.
+- README blob: `b50fe89e1735e6d306ea6dc8eae5169cb6f47a7e` (unchanged).
+- DISCLAIMER blob: `198a9cc33cfe25534213a38346d7f10e07e6a1a9` (unchanged).
+- DATA_DICTIONARY blob: `640dc58c2de961afbdb9b3960a71216ecb230223` (unchanged).
+- LEAGUE_INDEX blob: `e3f18cd3e9a5d7b38e4ce6cfd1d592251c06e79c` (unchanged).
+- New build-summary blob: `992dc314dceda100e4176ba49a76f43c547ec325`.
+- Build-summary generation time: `2026-11-26T07:40:37Z`.
+
+The new build refreshed the repository but **did not advance Serie A coverage** relative to the 2026-11-25 checkpoint:
+
+| Serie A 2026/27 metadata | 2026-11-25 | 2026-11-26 |
+|---|---:|---:|
+| Results rows | 120 | 120 |
+| Corner rows reported | 120 | 120 |
+| Fixtures | 260 | 260 |
+| Latest completed match date | 2026-11-23 | 2026-11-23 |
+| Build errors | 0 | 0 |
+
+These are aggregate build-summary fields only. No result CSV, fixture CSV, score, match row, or goal event was downloaded or parsed. The current repository build is newer, but the latest Serie A match date and row counts remain unchanged.
+
+The rights and provenance decision is unchanged:
+- The compilation remains informational/non-commercial only and has no OSI-approved licence.
+- Upstream publisher terms continue to apply. Serie A is listed as using fixturedownload, ESPN and football-data.co.uk; the README separately identifies FotMob as the top-10 corner-split source.
+- The official Football-Data fair-use page says the free CSVs are intended for private personal betting or academic research and are not intended for commercial or AI data-training projects. No provider permission has been obtained for this project.
+- The row schema still has no stable match ID, no per-field provider lineage, and no per-field upstream first-observed/correction timestamps.
+- A repository commit and dataset-level build timestamp do not prove the upstream first-seen/correction time of each field, nor do they grant private retention or V2 inference rights.
+
+**Disposition remains `HOLD_NO_INTEGRATION`.** The new build is a freshness checkpoint, not new match coverage or a rights change. Do not download the CSVs, build features, run inference, or use this source for the frozen V2 until the rights, per-field provenance, feature completeness and private retention gates are independently satisfied.
+
+The frozen candidate, 19-feature order, 20×2 weights, scaler/imputer, `active_lambda=0`, `shadow_lambda=1`, failed historical stability gate and closed prospective 0/30 outcome gate remain unchanged. No model-quality claim follows from this source metadata.
