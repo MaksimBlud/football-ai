@@ -249,7 +249,7 @@ def prepare_forward_capture(
     admission: frozen incumbent, current-season form and outcome gate still
     missing. All resulting original-V2 probabilities are diagnostic only.
     """
-    if as_of_utc.tzinfo is None:
+    if as_of_utc.tzinfo is None or as_of_utc.utcoffset() is None:
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
     from serie_a_v2_frozen_shadow_preview import _guard_outcome_free
@@ -266,6 +266,15 @@ def prepare_forward_capture(
         kickoff = parse_utc(q["commence_time_utc"])
         if quote_time > now or not quote_time < kickoff:
             raise ValueError("invalid stored quote timing")
+        if "created_at" not in q:
+            raise ValueError("saved quote row is missing created_at")
+        created_at = parse_utc(q["created_at"])
+        if created_at > now:
+            raise ValueError("saved quote row persisted after capture clock")
+        if created_at < quote_time:
+            raise ValueError("saved quote row persisted before declared snapshot time")
+        if not created_at < kickoff:
+            raise ValueError("saved quote row persisted at or after kickoff")
         if not now < kickoff:
             continue
         key = (q["event_id"], quote_time)
@@ -274,6 +283,7 @@ def prepare_forward_capture(
         record = {
             "event_id": q["event_id"],
             "quote_time_utc": quote_time.isoformat(),
+            "quote_row_created_at_utc": created_at.isoformat(),
             "kickoff_utc": kickoff.isoformat(),
             "status": "NO_EARLIER_SOURCE_ARCHIVE",
             "v2_preview": None,
