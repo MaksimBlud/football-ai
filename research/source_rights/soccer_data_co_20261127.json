@@ -22,8 +22,10 @@
     "active_lambda": 0,
     "shadow_residual_lambda": 1,
     "stability_gate_passed": false,
-    "outcome_read_gate_completed_primary_events": 30,
-    "outcome_read_before_gate": false
+    "outcome_read_before_gate": false,
+    "outcome_read_gate_required_completed_primary_events": 30,
+    "eligible_completed_primary_forecasts_observed": 0,
+    "outcome_read_gate_open": false
   },
   "free_plan": {
     "price_usd_per_month": 0,
