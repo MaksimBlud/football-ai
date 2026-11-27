@@ -85,5 +85,36 @@
     "Current-season per-fixture completeness for corners, yellow cards and red cards is not verified; aggregate all-season coverage is not a current-season guarantee.",
     "The provider's terms permit private storage and internal model use but prohibit raw-feed redistribution; upstream field-level rights and retention after account termination remain unresolved.",
     "The project has no approved private archive destination for this provider. No account, key, API call, download, feature build or inference is authorized."
-  ]
+  ],
+  "follow_up_20261127": {
+    "reviewed_at_utc": "2026-11-27T08:21:55Z",
+    "official_sources": {
+      "serie_a_page": "https://bigballsdata.com/serie-a-api",
+      "league_endpoint_registry": "https://bigballsdata.com/league-endpoints.json",
+      "coverage_page": "https://bigballsdata.com/coverage",
+      "terms": "https://bigballsdata.com/legal/terms"
+    },
+    "serie_a_page_checked_at_utc": "2026-11-27T06:42:00Z",
+    "league_endpoint_registry": {
+      "page_slug": "serie-a-api",
+      "endpoint_path": "/v1/matches/{id}/statistics",
+      "minimum_plan": "free",
+      "description": "Per-team post-match team statistics (soccer)",
+      "registry_is_described_as_same_registry_enforced_by_gateway": true
+    },
+    "dedicated_serie_a_capability_matrix_minimum_plan": "edge",
+    "dedicated_serie_a_faq_route_claim": "free",
+    "coverage_page": {
+      "last_refreshed": "2026-11-06",
+      "soccer_team_stats_status": "partial",
+      "current_2026_27_per_fixture_field_coverage": "unknown"
+    },
+    "resolution": "PUBLIC_ENDPOINT_REGISTRY_SAYS_FREE_BUT_DEDICATED_CAPABILITY_MATRIX_SAYS_EDGE",
+    "authenticated_free_plan_response_reviewed": false,
+    "provider_api_request_made": false,
+    "source_download_performed": false,
+    "integration_authorized": false,
+    "decision": "HOLD_NO_INTEGRATION",
+    "reason": "The registry is stronger than a generic marketing summary and is described as the gateway-enforced catalogue, but the dedicated Serie A page still contains a conflicting capability matrix. No authenticated Free response or provider clarification is available; upstream field-level rights and per-match first-observation/correction timestamp semantics also remain unresolved."
+  }
 }
