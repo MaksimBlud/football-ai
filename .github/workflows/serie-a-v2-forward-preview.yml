@@ -79,7 +79,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          private="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.private')"
+          private="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .private)"
           if [[ "$private" == "true" ]]; then
             echo "is_private=true" >> "$GITHUB_OUTPUT"
           else
