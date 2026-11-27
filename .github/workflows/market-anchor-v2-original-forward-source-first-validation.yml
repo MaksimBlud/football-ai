@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - research/v2-original-forward-source-first-restacked-on-980-20261127-run11
+      - research/v2-original-forward-private-redirect-restacked-on-981-20261127-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
