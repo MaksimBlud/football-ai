@@ -1,7 +1,7 @@
 {
   "schema_version": "MARKET_ANCHOR_1X2_V2_PROVIDER_AUDIT_V1",
   "provider": "Big Balls Sports Data",
-  "reviewed_at_utc": "2026-11-26T12:49:41Z",
+  "reviewed_at_utc": "2026-11-27T08:21:55Z",
   "decision": "HOLD_NO_INTEGRATION",
   "official_evidence": {
     "terms_url": "https://bigballsdata.com/legal/terms",
@@ -25,7 +25,7 @@
     "serie_a_plan_matrix_checked_at_utc": "2026-11-26T12:49:41Z",
     "open_api_plan_recheck_at_utc": "2026-11-25T00:52:28Z",
     "terms_page_checked_at_utc": "2026-11-26T12:49:41Z",
-    "serie_a_page_checked_at_utc": "2026-11-26T12:49:41Z",
+    "serie_a_page_checked_at_utc": "2026-11-27T06:42:00Z",
     "licence_notices_url": "https://bigballsdata.com/attribution",
     "licence_notices_checked_at_utc": "2026-11-26T12:49:41Z",
     "changelog_checked_at_utc": "2026-11-26T12:49:41Z",
@@ -33,7 +33,12 @@
     "current_serie_a_standings_source_as_of_utc": "2026-11-19T05:12:00Z",
     "sports_coverage_url": "https://bigballsdata.com/docs/sports",
     "sports_coverage_checked_at_utc": "2026-11-26T12:49:41Z",
-    "openapi_plan_recheck_at_utc": "2026-11-26T12:49:41Z"
+    "openapi_plan_recheck_at_utc": "2026-11-26T12:49:41Z",
+    "league_endpoint_registry_url": "https://bigballsdata.com/league-endpoints.json",
+    "league_endpoint_registry_checked_at_utc": "2026-11-27T08:21:55Z",
+    "coverage_page_url": "https://bigballsdata.com/coverage",
+    "coverage_page_checked_at_utc": "2026-11-27T08:21:55Z",
+    "coverage_page_last_refreshed": "2026-11-06"
   },
   "provider_terms": {
     "api_response_storage_permitted": true,
@@ -73,7 +78,7 @@
     "pricing_page_summary_says_current_season": true,
     "pricing_page_plan_bullet_says_current_plus_most_recent_season": true,
     "pricing_page_internal_season_depth_conflict": true,
-    "endpoint_entitlement_status": "HOLD_CONFLICTING_FIRST_PARTY_SERIE_A_MATRIX_AND_FAQ_OPENAPI",
+    "endpoint_entitlement_status": "HOLD_REGISTRY_FREE_BUT_SERIE_A_MATRIX_EDGE_CONFLICT",
     "endpoint_plan_conflict": true,
     "soccer_hub_endpoint_min_plan": "free",
     "serie_a_page_matrix_endpoint_min_plan": "edge",
@@ -97,7 +102,9 @@
     "global_pricing_summary_season_scope": "CURRENT_ONLY",
     "global_pricing_free_bullet_season_scope": "CURRENT_PLUS_MOST_RECENT",
     "changelog_free_sport_scope_effective_date": "2026-10-26",
-    "changelog_existing_free_key_scope_grace_end": "2026-11-24"
+    "changelog_existing_free_key_scope_grace_end": "2026-11-24",
+    "league_endpoint_registry_statistics_min_plan": "free",
+    "league_endpoint_registry_is_gateway_enforced": true
   },
   "coverage": {
     "all_seasons_finished_matches": 4591,
@@ -110,7 +117,9 @@
     "serie_a_page_current_season": "2026-27",
     "serie_a_page_source_checked_at_utc": "2026-11-26T08:55:42Z",
     "serie_a_page_standings_source_as_of_utc": "2026-11-19T05:12:00Z",
-    "aggregate_team_stats_coverage_not_current_season_proof": true
+    "aggregate_team_stats_coverage_not_current_season_proof": true,
+    "coverage_page_team_stats_status": "PARTIAL",
+    "coverage_page_last_refreshed": "2026-11-06"
   },
   "original_v2_feature_mapping": {
     "results_and_goals": "Potentially derivable from canonical match final scores.",
@@ -190,7 +199,8 @@
     "The provider says completed match/player rows can be corrected after full time and advises retaining the latest source date; per-match first-observation and per-field correction timestamp semantics remain undocumented.",
     "Local receipt UTC and SHA-256 prove project possession of exact bytes before a later quote, not the provider's upstream first observation or correction history.",
     "Retention after account closure is not explicitly defined, private raw storage is not yet available in the public repository, and separate owner authorization has not been provided.",
-    "The canonical rights manifest remains HOLD_NO_INTEGRATION; integration, automated capture and frozen inference remain false."
+    "The canonical rights manifest remains HOLD_NO_INTEGRATION; integration, automated capture and frozen inference remain false.",
+    "2026-11-27 live follow-up: the dedicated Serie A page's league-endpoints.json registry lists GET /v1/matches/{id}/statistics as Free and says the endpoint catalogue is generated from the same registry the gateway enforces; the same page's capability matrix still lists the route as Edge. This narrows but does not eliminate the first-party documentation conflict. No authenticated Free response or provider clarification was obtained."
   ],
   "integration_allowed": false,
   "automated_capture_authorized": false,
@@ -204,7 +214,7 @@
     "serie_a_faq_minimum_plan": "free",
     "serie_a_plan_matrix_minimum_plan": "edge",
     "resolution": "CONFLICTING_OFFICIAL_DOCUMENTATION",
-    "implication": "Keep HOLD_NO_INTEGRATION. Do not infer Free entitlement for the required match-statistics route or prior-season access from conflicting first-party plan statements.",
+    "implication": "The live Serie A endpoint registry, which the page says is generated from the same registry the gateway enforces, lists GET /v1/matches/{id}/statistics as Free. The dedicated Serie A capability matrix still lists Edge, while the FAQ says the route is Free. Without an authenticated Free-plan response or provider clarification, do not make a provider request or integrate.",
     "serie_a_page_matrix_minimum_plan": "edge",
     "global_pricing_season_scope": "current_plus_most_recent",
     "serie_a_page_season_scope": "current_only",
@@ -212,7 +222,13 @@
     "global_pricing_free_bullet_season_scope": "current_plus_most_recent",
     "soccer_hub_season_scope": "current_only",
     "free_sport_scope_effective_date": "2026-10-26",
-    "existing_free_key_grace_end": "2026-11-24"
+    "existing_free_key_grace_end": "2026-11-24",
+    "league_endpoint_registry_min_plan": "free",
+    "league_endpoint_registry_url": "https://bigballsdata.com/league-endpoints.json",
+    "league_endpoint_registry_is_gateway_enforced": true,
+    "dedicated_serie_a_capability_matrix_min_plan": "edge",
+    "dedicated_serie_a_faq_route_claim": "free",
+    "checked_at_utc": "2026-11-27T08:21:55Z"
   },
   "security_controls": {
     "canonical_rights_manifest_pinned_by_git_blob_sha1": true,
