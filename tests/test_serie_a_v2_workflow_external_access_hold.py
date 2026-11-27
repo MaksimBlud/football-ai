@@ -915,3 +915,47 @@ def test_external_io_inventory_recognizes_compiled_runtimes_shells_and_container
     assert _is_original_v2_live_workflow(
         "name: serie-a-v2 source capture\nrun: docker run source-capture:latest"
     )
+
+
+PINNED_LIVE_ACTIONS = {
+    "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+    "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+    "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+}
+
+
+def test_live_v2_workflows_pin_actions_and_disable_checkout_credentials():
+    """Live-capable V2 workflows must not persist checkout tokens into later steps."""
+    for path in WORKFLOWS:
+        text = _workflow(path)
+        for action in PINNED_LIVE_ACTIONS:
+            assert f"uses: {action}" in text, f"{path}: missing immutable action pin {action}"
+
+        checkout_lines = text.splitlines()
+        checkout_index = next(
+            (i for i, line in enumerate(checkout_lines)
+             if line == "      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"),
+            None,
+        )
+        assert checkout_index is not None, f"{path}: pinned checkout action missing"
+        checkout_end = next(
+            (i for i in range(checkout_index + 1, len(checkout_lines))
+             if checkout_lines[i].startswith("      - ")),
+            len(checkout_lines),
+        )
+        checkout_block = "\n".join(checkout_lines[checkout_index:checkout_end])
+        assert "persist-credentials: false" in checkout_block, (
+            f"{path}: checkout credentials must not persist into dependency/test steps"
+        )
+        assert "persist-credentials: true" not in checkout_block
+
+        action_refs = [
+            line.strip().split("uses:", 1)[1].strip()
+            for line in checkout_lines
+            if line.strip().startswith("uses:")
+        ]
+        for action_ref in action_refs:
+            if action_ref.startswith("actions/"):
+                assert re.fullmatch(r"actions/[^@]+@[0-9a-f]{40}", action_ref), (
+                    f"{path}: mutable or unpinned GitHub Action reference: {action_ref}"
+                )
