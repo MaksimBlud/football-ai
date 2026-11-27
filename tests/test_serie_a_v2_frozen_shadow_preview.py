@@ -21,6 +21,7 @@ def market(**overrides):
         "league": "SERIE_A", "event_id": "event-serie-a-001",
         "home_team": "Inter", "away_team": "Napoli",
         "commence_time_utc": KICKOFF, "snapshot_time_utc": QUOTE,
+        "created_at": "2026-10-13T14:00:01Z",
         "home_odds": 2.4, "draw_odds": 3.2, "away_odds": 3.0,
     }
     row.update(overrides)
@@ -171,7 +172,10 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
     class Q:
         def __init__(self):
             self.calls = []
-        def select(self, v): self.calls.append("select");return self
+        def select(self, v):
+            self.calls.append(("select", v))
+            assert "created_at" in v.split(",")
+            return self
         def eq(self, k, v): self.calls.append("eq");assert (k,v)==("league","SERIE_A");return self
         def gt(self, k, v): self.calls.append("gt"); assert k=="commence_time_utc";return self
         def order(self, *a, **kw): self.calls.append("order");return self
@@ -184,7 +188,9 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
             return self.query
     db=DB()
     assert v2_preview.fetch_saved_upcoming_serie_a_quotes(db,now=NOW)==[market()]
-    assert db.query.calls==["select","eq","gt","order","limit","execute"]
+    assert [call[0] if isinstance(call, tuple) else call for call in db.query.calls] == [
+        "select", "eq", "gt", "order", "limit", "execute"
+    ]
 
 
 def test_research_no_promotion_or_outcome_read_source():
