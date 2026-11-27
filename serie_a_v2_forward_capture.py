@@ -74,7 +74,31 @@ def require_private_repository(*, token: str, get=requests.get) -> dict:
 def _validated_artifact_download_location(location: Any) -> str:
     """Accept only GitHub Actions' HTTPS Azure artifact-download redirect.
 
-    GitHub documents the artifact
+    GitHub documents the artifact ZIP endpoint as a 302 redirect. The signed
+    Location is a short-lived bearer URL, so it is fetched separately without
+    forwarding the GitHub token or API headers. Unknown origins fail closed.
+    """
+    if not isinstance(location, str) or not location or len(location) > 4096:
+        raise ValueError("GitHub artifact redirect Location is missing or invalid")
+    try:
+        parsed = urlsplit(location)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("GitHub artifact redirect Location is malformed") from exc
+    host = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or port not in (None, 443)
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.fragment
+        or not re.fullmatch(r"productionresultssa\d+\.blob\.core\.windows\.net", host)
+        or not parsed.path.startswith("/actions-results/")
+        or not parsed.query
+        or any(part in {".", ".."} for part in parsed.path.split("/"))
+    ):
+        raise ValueError("GitHub artifact redirect origin or URL shape is not allowed")
+    return location
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     require_v2_live_access()
