@@ -11,6 +11,7 @@ import argparse
 from datetime import datetime, timezone, timedelta
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -18,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 import market_anchor_1x2_v2_shadow as v2
+from serie_a_v2_live_access_guard import require_private_repository
 
 FROZEN_FILE = Path(__file__).resolve().parent / (
     "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
@@ -248,7 +250,8 @@ def shadow_preview(
 
 
 def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[dict]:
-    """Read *existing* observations only. No odds provider call or DB write."""
+    """Read existing observations only after the owner live-access and private-repo gate."""
+    require_private_repository(token=os.environ.get("GITHUB_TOKEN", ""))
     items = (
         client.table("odds_snapshots")
         .select(",".join(SAVED_QUOTE_KEYS))
