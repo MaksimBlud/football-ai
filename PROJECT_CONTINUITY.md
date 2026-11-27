@@ -1,3 +1,40 @@
+## 2026-11-27 02:56 UTC — pre-match provenance gap, free-adapter status, and frozen-gate lineage
+
+Read-only checkpoint for the original `MARKET_ANCHOR_1X2_V2` only. It records no new provider access, inference, outcome read, Supabase mutation, or model change.
+
+### Fresh main, workflows, and open PRs
+
+- Main remains `40887ebb215730190d7a6c7a1693373ec4afcdfc`; main `PROJECT_CONTINUITY.md` remains the older 2026-10-18 checkpoint. The active research continuity is on this #977 branch.
+- Main's original V2 and current-form forward workflows remain unheld until HUMAN-MERGE of root [#781](https://github.com/MaksimBlud/football-ai/pull/781). The original forward workflow still has its existing schedule and workflow-run trigger; no schedule was changed.
+- Root #781 remains OPEN / Ready for review / unmerged at HEAD `5552bec363ae72ad7aef04c598d2ce861f33eb42`, based directly on main. All eight PR workflow runs attached to that exact commit are completed SUCCESS. Its proposed hold sets `MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=false`, scopes credentials to disabled live steps, and gates source/quote artifact uploads. This hold is not active on main yet.
+- #977 remains Draft / OPEN / HUMAN-MERGE at HEAD `a56ace1c5f5f0083c431d4b33f04c644d0108622`, parent #976 HEAD `6f5f29278dc3bddc07ec0501cb8e12d624a664e8`. Exact-head CI remains SUCCESS: Source-First 542 passed on Python 3.11 and 542 on 3.12, Frozen Shadow 215 passed, La Liga 6 passed; production `.pkl` diff guards passed.
+- Independent free-source candidates remain blocked: [#952 Big Balls](https://github.com/MaksimBlud/football-ai/pull/952) exact HEAD `457010180fb6925c85f04cfd7a88bdd9cf158725`, 34 tests on each of Python 3.11/3.12 and 7/7 CI SUCCESS, but Free entitlement, upstream rights and private retention are unresolved; [#800 5Dollar adapter](https://github.com/MaksimBlud/football-ai/pull/800) exact HEAD `ecdbe32bdbfbe15bef5dedefa480d98ea0585b95`, 125 offline tests PASS and production `.pkl` guard PASS, but its checked-in rights manifest remains HOLD.
+- The #800 adapter verifies private POSIX file permissions, raw-page SHA-256, capture/quote time ordering, the strict identity audit and the pinned protocol SHA. It deliberately emits `source_before_quote_verified=false` pending independent GitHub source-run/log attestation; it performs no network access, quote read, inference or target-outcome scoring. Its synthetic tests are not live-source proof.
+
+### Fresh Supabase read-only provenance audit
+
+All queries below selected only fixture identity, source/provenance timestamps, or quote chronology metadata; no score, goal, result, settlement, prediction or odds-price fields were selected.
+
+- The earlier Serie A lookup against `public.matches` returned no rows because that table currently contains EPL seasons only. The correct Serie A metadata source is `public.league_finished_results`.
+- `public.league_finished_results`, Serie A 2026-2027 through 2026-11-26: 123 fixture-metadata rows, 123 raw directed identities and 120 identities after the exact V2-local/runtime alias normalization (three alias-collapsed duplicates). The feature-input metadata threshold is therefore met; this is not a forecast or evaluation gate.
+- The same table's source-only audit found 11 rows marked `source=the-odds-api` and 112 rows with null source. All 123 rows had null `source_updated_at_utc`; `persisted_at_utc` exists, spanning 2026-08-29 through 2026-11-24. Therefore these rows do not provide an upstream source-receipt timestamp or exact raw-source SHA for the V2 source-before-quote contract.
+- Current Serie A rows in `public.league_corner_results`: 0. Current row counts in `public.match_statistics` and `public.match_stats`: 0 each. Their schemas do not supply the complete, source-attested original 19-feature history. No Supabase row or schema was changed.
+- A strict all-league `public.odds_snapshots` aggregate using only `league,event_id,snapshot_time_utc,created_at,commence_time_utc` found **3,915** rows across **327** events satisfying `snapshot_time_utc < created_at < commence_time_utc`; **0** future events have such a row. Serie A contributes 620 rows / 63 events; its latest strict snapshot remains **2026-10-13 14:48:53.042620 UTC**. No odds prices were selected. This is not a new prospective quote stream.
+
+### Frozen stability-gate lineage — clarified, not changed
+
+- The frozen candidate remains SHA-256 `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`, 19 features, 20×2 weights, 3,799 training rows through 2026-06-30, `active_lambda=0`, `shadow_lambda=1`.
+- The preregistered protocol blob remains SHA-1 `65729e9639720e67624c1481190aa22ae606f151`. Its existing stability gate explicitly references `MARKET_ANCHOR_1X2_V1_ROBUSTNESS`, not a direct prospective V2 test. I fetched and checked the exact referenced source report blob `9d5e1aad2a9cf5bb833cfea491c4f828d7cb72fd` and robustness report blob `96d2f462849a70276a2c27a2c0cc18ec0672b00a`.
+- In the inherited Serie A 2025-2026 OOT sample (n=380), the V1 residual had delta Brier `-0.0010154220` and delta LogLoss `-0.0011567799` versus market, but the 20,000-draw bootstrap 95% CI upper bounds were **+0.0032368771** and **+0.0060389577**; bootstrap probabilities of beating market were **0.6831** and **0.6317**; only **2/6** prior seasons won both metrics. The frozen requirements are CI upper bounds below zero, both probabilities at least 0.95, and at least 4/6 dual-metric wins. The gate therefore correctly remains FAILED. These are inherited V1 robustness figures, not evidence that prospective V2 itself has failed or beaten market.
+- The separate prospective V2 outcome-read gate remains **0/30**. No protected 2026/27 target outcomes were read or scored, and no Brier/LogLoss superiority claim is admissible.
+
+### Security and unchanged controls
+
+- Fresh Supabase Security Advisor still reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, `epl_ai_market_pair_ledger`. Four tables have RLS enabled but no policies: `competitions`, `match_stats`, `matches`, `standings`. No remediation SQL was executed; enabling RLS without policies could break existing access.
+- No provider/API request, source download, paid request, Supabase write/DDL, target-outcome read, inference, refit, threshold tuning, production `.pkl` change, weight/feature/protocol change, main update, merge, promotion, bet, cron/schedule change, or other-agent setting change occurred.
+
+---
+
 ## 2026-11-26 21:48 UTC — live Supabase metadata-only identity replay and existing table schema audit
 
 This checkpoint is read-only evidence for the original MARKET_ANCHOR_1X2_V2 cohort. It does not authorize a provider request, source archive, inference or outcome read.
