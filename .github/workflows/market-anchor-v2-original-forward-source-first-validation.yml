@@ -5,15 +5,30 @@ on:
     branches:
       - research/v2-original-forward-source-first-restacked-on-980-20261127-run11
       - research/v2-original-forward-private-redirect-restacked-on-981-20261127-run11
+      - research/v2-original-forward-runtime-lock-20261127-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_forward_runtime_lock.py"
+      - "research/locks/market-anchor-v2-forward-py311.lock"
+      - "research/locks/market-anchor-v2-forward-py312.lock"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+      - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+      - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
+      - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_forward_runtime_lock.py"
+      - "research/locks/market-anchor-v2-forward-py311.lock"
+      - "research/locks/market-anchor-v2-forward-py312.lock"
+      - ".github/workflows/serie-a-v2-forward-preview.yml"
+      - ".github/workflows/serie-a-v2-current-form-source-capture.yml"
+      - ".github/workflows/serie-a-v2-current-form-forward-preview.yml"
+      - ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
       - ".github/workflows/market-anchor-v2-original-forward-source-first-validation.yml"
 
 permissions:
@@ -30,7 +45,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        include:
+          - python-version: "3.11"
+            requirements-file: research/locks/market-anchor-v2-forward-py311.lock
+          - python-version: "3.12"
+            requirements-file: research/locks/market-anchor-v2-forward-py312.lock
     env:
       PYTHONPATH: .
       OPENBLAS_NUM_THREADS: "1"
@@ -45,10 +64,10 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install offline regression dependencies
+      - name: Install exact offline regression runtime
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest==9.2.0 numpy pandas scipy scikit-learn requests supabase python-dotenv
+          python -m pip install -r "${{ matrix.requirements-file }}"
+          python -m pip check
       - name: Compile original V2 source-first modules
         run: |
           python -m py_compile \
@@ -68,6 +87,7 @@ jobs:
             tests/test_serie_a_v2_live_diagnostic_report.py \
             tests/test_serie_a_v2_asof_feature_manifest.py \
             tests/test_serie_a_v2_atalanta_alias.py \
-            tests/test_serie_a_v2_frozen_shadow_preview.py
+            tests/test_serie_a_v2_frozen_shadow_preview.py \\
+            tests/test_serie_a_v2_forward_runtime_lock.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
