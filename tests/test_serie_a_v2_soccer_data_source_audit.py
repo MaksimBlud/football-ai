@@ -47,6 +47,11 @@ class SoccerDataSourceAuditTests(unittest.TestCase):
         self.assertEqual(self.manifest["paid_provider_calls"], 0)
         self.assertEqual(self.manifest["paid_odds_calls"], 0)
         self.assertIs(self.manifest["production_pkl_changed"], False)
+        original = self.manifest["original_v2"]
+        self.assertEqual(original["outcome_read_gate_required_completed_primary_events"], 30)
+        self.assertEqual(original["eligible_completed_primary_forecasts_observed"], 0)
+        self.assertIs(original["outcome_read_gate_open"], False)
+        self.assertIs(original["outcome_read_before_gate"], False)
 
     def test_free_plan_scope_is_not_misrepresented(self) -> None:
         free = self.manifest["free_plan"]
@@ -105,6 +110,7 @@ class SoccerDataSourceAuditTests(unittest.TestCase):
         protocol = json.loads(raw_protocol)
         self.assertEqual(protocol["first_outcome_read_gate"]["completed_primary_events"], 30)
         self.assertIs(protocol["first_outcome_read_gate"]["outcome_read_before_gate"], False)
+        self.assertIs(candidate["opened_2026_27_outcomes_used"], False)
         self.assertEqual(self.manifest["original_v2"]["candidate_sha256"], FROZEN_SHA)
         self.assertEqual(self.manifest["original_v2"]["feature_count"], 19)
         self.assertEqual(self.manifest["original_v2"]["weight_matrix_shape"], [20, 2])
