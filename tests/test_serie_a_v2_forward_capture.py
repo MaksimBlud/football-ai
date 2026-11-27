@@ -4,7 +4,9 @@ from io import BytesIO
 import json
 from datetime import datetime, timedelta, timezone
 import zipfile
+import sys
 
+import serie_a_v2_forward_capture as forward_capture
 import pytest
 
 from serie_a_v2_frozen_shadow_preview import parse_utc
@@ -15,6 +17,7 @@ from serie_a_v2_forward_capture import (
     ARTIFACT_NAME, ARCHIVE_REPORT, SOURCE_DIR,
     capture_forward_with_source_preflight, discover_archives,
     prepare_forward_capture, verify_source_run, SOURCE_WORKFLOW_PATH,
+    get_archive, require_private_repository,
 )
 
 NOW = datetime(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
@@ -640,4 +643,310 @@ def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quo
         "archive_download_and_sha_input",
     ]
     assert not output.exists()
+    assert not sources.exists()
+
+
+class _FakeArtifactResponse:
+    def __init__(self, status_code, url, *, headers=None, content=b"", history=()):
+        self.status_code = status_code
+        self.url = url
+        self.headers = headers or {}
+        self.content = content
+        self.history = list(history)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+class _FakeRepositoryResponse:
+    def __init__(self, url, *, private=True, full_name="MaksimBlud/football-ai"):
+        self.url = url
+        self.status_code = 200
+        self.data = {"full_name": full_name, "private": private}
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self.data
+
+
+REPOSITORY_API_URL = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+def _with_private_repository(fake_get, *, private=True, full_name="MaksimBlud/football-ai"):
+    def get(url, **kwargs):
+        if url == REPOSITORY_API_URL:
+            assert kwargs.get("allow_redirects") is False
+            return _FakeRepositoryResponse(url, private=private, full_name=full_name)
+        return fake_get(url, **kwargs)
+    return get
+
+def test_get_archive_requires_private_repository_before_source_zip_download(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+
+    def public_repository_get(url, **kwargs):
+        calls.append((url, kwargs))
+        if url == REPOSITORY_API_URL:
+            return _FakeRepositoryResponse(url, private=False)
+        raise AssertionError("source ZIP must not be requested for a public repository")
+
+    with pytest.raises(PermissionError, match="requires the exact GitHub repository to be private"):
+        get_archive(123, token="synthetic-token", get=public_repository_get)
+
+    assert len(calls) == 1
+    assert calls[0][0] == REPOSITORY_API_URL
+    assert calls[0][1]["allow_redirects"] is False
+
+def test_get_archive_fetches_signed_storage_url_without_forwarding_github_token(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = "https://api.github.com/repos/MaksimBlud/football-ai/actions/artifacts/123/zip"
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+    archive_bytes = bytes.fromhex("504b0304") + b"synthetic-zip"
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        if len(calls) == 1:
+            return _FakeArtifactResponse(
+                302, api_url, headers={"Location": signed_url}
+            )
+        return _FakeArtifactResponse(200, signed_url, content=archive_bytes)
+
+    assert get_archive(123, token="synthetic-token", get=_with_private_repository(fake_get)) == archive_bytes
+    assert len(calls) == 2
+    assert calls[0][0] == api_url
+    assert calls[0][1]["allow_redirects"] is False
+    assert calls[0][1]["headers"]["Authorization"] == "Bearer synthetic-token"
+    assert calls[1][0] == signed_url
+    assert calls[1][1]["allow_redirects"] is False
+    assert "headers" not in calls[1][1]
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "http://productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://evil.example/actions-results/a.zip?sig=x",
+        "https://productionresults.evil.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/other/a.zip?sig=x",
+        "https://user@productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net:444/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/a.zip",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/../a.zip?sig=x",
+    ],
+)
+
+def test_get_archive_rejects_untrusted_or_malformed_redirect_without_following(
+    monkeypatch, location
+):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = "https://api.github.com/repos/MaksimBlud/football-ai/actions/artifacts/123/zip"
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        return _FakeArtifactResponse(302, api_url, headers={"Location": location})
+
+    with pytest.raises(ValueError, match="redirect"):
+        get_archive(123, token="synthetic-token", get=_with_private_repository(fake_get))
+    assert len(calls) == 1
+    assert calls[0][1]["allow_redirects"] is False
+
+def test_get_archive_rejects_missing_location_before_storage_request(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = "https://api.github.com/repos/MaksimBlud/football-ai/actions/artifacts/123/zip"
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        return _FakeArtifactResponse(302, api_url)
+
+    with pytest.raises(ValueError, match="Location"):
+        get_archive(123, token="synthetic-token", get=_with_private_repository(fake_get))
+    assert calls == [api_url]
+
+def test_get_archive_rejects_api_200_instead_of_documented_redirect(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = "https://api.github.com/repos/MaksimBlud/football-ai/actions/artifacts/123/zip"
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        return _FakeArtifactResponse(200, api_url, content=b"not-a-redirect")
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        get_archive(123, token="synthetic-token", get=_with_private_repository(fake_get))
+    assert calls == [api_url]
+
+def test_get_archive_rejects_second_redirect_without_following_or_token(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = "https://api.github.com/repos/MaksimBlud/football-ai/actions/artifacts/123/zip"
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        if len(calls) == 1:
+            return _FakeArtifactResponse(302, api_url, headers={"Location": signed_url})
+        return _FakeArtifactResponse(
+            302, signed_url, headers={"Location": "https://evil.example/next"}
+        )
+
+    with pytest.raises(ValueError, match="HTTP 200"):
+        get_archive(123, token="synthetic-token", get=_with_private_repository(fake_get))
+    assert len(calls) == 2
+    assert "headers" not in calls[1][1]
+    assert calls[1][1]["allow_redirects"] is False
+
+def test_private_repository_guard_accepts_only_exact_private_repository(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
+    calls = []
+
+    class Response:
+        status_code = 200
+        def __init__(self, data):
+            self.url = url_value
+            self.data = data
+        def json(self):
+            return self.data
+
+    def get(requested_url, headers, timeout, allow_redirects):
+        calls.append((requested_url, headers, timeout, allow_redirects))
+        assert headers["Authorization"] == "Bearer test-token"
+        return Response({"full_name": "MaksimBlud/football-ai", "private": True})
+
+    assert require_private_repository(token="test-token", get=get) == {
+        "repository": "MaksimBlud/football-ai", "private": True
+    }
+    assert len(calls) == 1
+    assert calls[0][0] == url_value
+    assert calls[0][3] is False
+
+def test_private_repository_guard_rejects_public_repository_before_source_access(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 200
+        url = url_value
+        def json(self):
+            return {"full_name": "MaksimBlud/football-ai", "private": False}
+
+    with pytest.raises(PermissionError, match="requires the exact GitHub repository to be private"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+def test_private_repository_guard_rejects_wrong_repository_identity(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 200
+        url = url_value
+        def json(self):
+            return {"full_name": "attacker/other-repo", "private": True}
+
+    with pytest.raises(ValueError, match="identity mismatch"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+def test_private_repository_guard_rejects_redirect_without_parsing_body(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    url_value = "https://api.github.com/repos/MaksimBlud/football-ai"
+
+    class Response:
+        status_code = 302
+        url = url_value
+        def json(self):
+            raise AssertionError("redirect body must not be parsed")
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+def test_private_repository_guard_rejects_unexpected_final_url(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+
+    class Response:
+        status_code = 200
+        url = "https://evil.example/repos/MaksimBlud/football-ai"
+        def json(self):
+            raise AssertionError("unexpected response URL must be rejected before parsing")
+
+    with pytest.raises(ValueError, match="response URL"):
+        require_private_repository(
+            token="test-token",
+            get=lambda requested_url, headers, timeout, allow_redirects: Response(),
+        )
+
+def test_original_forward_cli_checks_private_repository_before_archive_discovery(monkeypatch, tmp_path):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    output = tmp_path / "output" / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_forward_capture.py",
+        "--output", str(output),
+        "--sources-output-dir", str(sources),
+    ])
+    calls = []
+
+    def reject_public_repository(*, token):
+        calls.append(("privacy", token))
+        raise PermissionError("repository is public")
+
+    def forbidden_discovery(*, token):
+        calls.append(("archives", token))
+        raise AssertionError("archive discovery must not run for a public repository")
+
+    monkeypatch.setattr(forward_capture, "require_private_repository", reject_public_repository)
+    monkeypatch.setattr(forward_capture, "discover_archives", forbidden_discovery)
+
+    with pytest.raises(PermissionError, match="repository is public"):
+        forward_capture.main()
+
+    assert calls == [("privacy", "test-token")]
+    assert not output.parent.exists()
+    assert not sources.exists()
+
+def test_original_forward_cli_keeps_live_access_gate_before_private_metadata(monkeypatch, tmp_path):
+    monkeypatch.delenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", raising=False)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MaksimBlud/football-ai")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    output = tmp_path / "output" / "forward.json"
+    sources = tmp_path / "sources"
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_forward_capture.py",
+        "--output", str(output),
+        "--sources-output-dir", str(sources),
+    ])
+    calls = []
+
+    def forbidden(*_args, **_kwargs):
+        calls.append("called")
+        raise AssertionError("no metadata or archive access before live-access approval")
+
+    monkeypatch.setattr(forward_capture, "require_private_repository", forbidden)
+    monkeypatch.setattr(forward_capture, "discover_archives", forbidden)
+
+    with pytest.raises(PermissionError, match="MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true"):
+        forward_capture.main()
+
+    assert calls == []
+    assert not output.parent.exists()
     assert not sources.exists()
