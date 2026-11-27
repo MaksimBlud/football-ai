@@ -189,6 +189,10 @@ def validate_private_prequote_archive(
         raise ArchiveGateError("source match must belong to Serie A")
     if match.get("status") != "finished":
         raise ArchiveGateError("source match must be finished")
+    if not match_received < stats_received:
+        raise ArchiveGateError(
+            "statistics receipt must follow the finished-match observation"
+        )
 
     source_kickoff = _utc(match.get("kickoff_utc"), "source kickoff")
     score = match.get("score")
