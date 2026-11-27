@@ -19,6 +19,19 @@ However, this is **not yet a cleared source for the original frozen V2**:
 
 The audit therefore records a **conditional candidate, not permission to integrate**.
 
+## 2026-11-27 — live Serie A endpoint-registry follow-up
+
+A fresh official-page review at 2026-11-27 08:21:55 UTC found a more specific plan record than the prior OpenAPI-only check:
+
+- The dedicated Serie A page was itself marked checked at 2026-11-27 06:42 UTC.
+- Its machine-readable `league-endpoints.json` entry for the `serie-a-api` page lists `GET /v1/matches/{id}/statistics` as **Free**, describing it as per-team post-match statistics. The same page says this endpoint catalogue is generated from the registry the gateway enforces.
+- The same dedicated page's capability matrix still marks that route as **Edge**, while its FAQ says the route is Free (with `expected_goals` Solo+). The plan conflict is therefore narrowed but not eliminated. No authenticated Free-plan response or provider clarification was obtained.
+- The endpoint is explicitly post-match, not a pre-match feed. It could only provide lagged inputs to later fixtures after an independently authorized private capture.
+- The coverage page still classifies soccer `team_stats` as Partial and says its last refresh was 2026-11-06. Current 2026/27 per-fixture completeness for corners, yellow cards and red cards remains unknown.
+- Provider Terms still permit private response storage and internal model use, but upstream field-level sublicensing rights, raw retention after account closure, and per-match first-observed/per-field correction timestamp semantics remain unresolved.
+
+**Decision remains HOLD_NO_INTEGRATION.** No account, key, API request, download, source archive, feature calculation, inference, Supabase read/write, paid call, or model change was made. The registry evidence does not authorize integration by itself.
+
 ## Provider terms and data rights
 
 The [official Terms of Service](https://bigballsdata.com/legal/terms), effective 2026-08-10, state:
