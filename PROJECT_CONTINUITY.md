@@ -6747,3 +6747,43 @@ This checkpoint records a code-and-test hardening in existing PR #800; it does n
 - Final exact-head CI on #800 HEAD `ecdbe32bdbfbe15bef5dedefa480d98ea0585b95`: 7/7 workflows SUCCESS. Frozen V2 Shadow Tests [#45895069563](https://github.com/MaksimBlud/football-ai/actions/runs/45895069563) reports **125 passed** and production model hash guard SUCCESS. Research PR Validation [#45895069443](https://github.com/MaksimBlud/football-ai/actions/runs/45895069443), Serie A [#45895069538](https://github.com/MaksimBlud/football-ai/actions/runs/45895069538), Bundesliga [#45895069590](https://github.com/MaksimBlud/football-ai/actions/runs/45895069590), Eredivisie [#45895069581](https://github.com/MaksimBlud/football-ai/actions/runs/45895069581), Ligue 1 [#45895069456](https://github.com/MaksimBlud/football-ai/actions/runs/45895069456), and Product [#45895069420](https://github.com/MaksimBlud/football-ai/actions/runs/45895069420) all completed SUCCESS.
 - #800 remains Draft/Open/Mergeable and is not merged. The checked-in 5Dollar rights manifest remains `HOLD`: Free field entitlement, upstream rights and private-retention scope are not verified. No account, self-attestation, API key, provider request, source download, Supabase access/write, inference, target-outcome read, refit or promotion occurred. The adapter remains offline-only and rejects real source bundles while the rights manifest is HOLD.
 - Merge-order safety: manifests produced by current main's older count-only gate are intentionally rejected by the hardened adapter. Integrate strict identity-gate PR #977 before any future source capture can be considered; after that, separately resolve provider rights and private storage. #800 is still based on main and its code does not change main or the frozen candidate.
+
+
+## 2026-11-27 06:48 UTC — fresh original V2 recovery and provenance checkpoint
+
+This entry is a documentation-only update on the existing strict identity-gate branch for original `MARKET_ANCHOR_1X2_V2`. It does not update `main`, authorize a source, or open either scientific gate.
+
+### Main and original workflow state
+
+- Fresh `main`: `40887ebb215730190d7a6c7a1693373ec4afcdfc`.
+- The latest original-V2 section in main's `PROJECT_CONTINUITY.md` is still dated 2026-10-18; this branch carries the newer research continuity only.
+- Main's original forward workflow `.github/workflows/serie-a-v2-forward-preview.yml` still has schedule `8 8 * * *`, quote/source credentials in the live job, and an `if: always()` public artifact upload using mutable action tags. The main current-form source workflow still has schedule `50 5 * * *` and an `if: always()` public source-artifact upload. Neither workflow is held on main.
+- No matching GitHub Actions run was returned for the expected 2026-11-27 05:50 UTC current-form source-capture window or 06:13 UTC free-diagnostic window when queried at 06:48 UTC. No manual dispatch was issued.
+- Main's original forward helper still calls the saved-quote reader before source archive discovery/verification. The source-first implementation is in the open #938 stack, not main.
+
+### Exact PR and CI state
+
+- Root hold PR #781: OPEN / Ready for review / mergeable / unmerged; exact HEAD `8059553b6b0db4a76b94989bddbc0e4a065aa90a`, base main `40887ebb215730190d7a6c7a1693373ec4afcdfc`; **8/8 exact-HEAD workflows SUCCESS** (run IDs 45937822574, 45937822587, 45937822653, 45937822645, 45937822593, 45937822647, 45937822619, 45937822600). The PR description was refreshed with the current SHA and run links. HUMAN-MERGE only.
+- The immediate child #879 is stale relative to the current #781 root: #879 head `02bf0873979551ddd98511df013a27f872893990` compared with root `8059553b6b0db4a76b94989bddbc0e4a065aa90a` is DIVERGED (2 ahead / 3 behind; merge base `5552bec363ae72ad7aef04c598d2ce861f33eb42`). Descendant #938 remains aligned with the old #879 head. Rebase/restack and exact-head revalidation are required after the root hold is manually integrated; do not treat old descendant CI as current-root validation.
+- PR #977 current HEAD `d7bc9b795071f04d8ff5f4e8280720abb415c0c7`: three exact-head workflows SUCCESS — source-first validation (542 passed on Python 3.11 and 542 on 3.12, production `.pkl` guards passed), frozen shadow validation (215 passed), and La Liga path-triggered validation (6 passed). It remains Draft and stacked on #976.
+- PR #978 current HEAD `1424e7e3bf76921f521b9a602c528e4415f20dcc`: Original V2 Shadow Validation run #45943449459 completed SUCCESS with 218 tests; this is a shadow-validation result, not full-chain integration or model-quality evidence.
+- PR #790 current HEAD `04a060eea07e52170635724887053cced0a0ee6f`: 7/7 exact-head workflows SUCCESS. Dedicated source audit #45950222256 passed 11 tests on Python 3.11 and 11 on 3.12; production `.pkl` diff guards passed. Open-Matchday remains HOLD because its compilation is non-commercial-only, upstream rights and field lineage are unresolved, and no per-field source/correction clock exists.
+- PR #952 current HEAD `457010180fb6925c85f04cfd7a88bdd9cf158725`: the official Big Balls terms permit private response storage and internal model training/evaluation/backtesting, but the Free statistics endpoint remains contradictory across first-party documentation (OpenAPI/FAQ say Free; the Serie A plan matrix says Edge). Upstream field-level rights, current-season completeness, retention after account closure and first-observation/correction semantics remain unresolved. HOLD_NO_INTEGRATION remains in force.
+
+### Read-only Supabase metadata — no outcome fields
+
+The queries selected only fixture identity, league/season, source/timestamp metadata and pre-match quote timestamps; no scores, goals, result, settlement or prediction-correctness columns were selected.
+
+- Strict `odds_snapshots` chronology `snapshot_time_utc < created_at < commence_time_utc`: **3,915 rows / 327 events** across the returned leagues; **0 future events** have a strictly pre-kickoff saved quote. Serie A: **620 rows / 63 events**, latest strict snapshot `2026-10-13T14:48:53.042620Z`.
+- `league_finished_results` season `2026/2027` metadata: Serie A **123 raw fixture keys**, all **123** missing `source_updated_at_utc`. The strict V2-local identity audit already recorded in this branch canonicalizes these to **120 unique fixtures**, 3 alias-collision groups, no reversed-side duplicates and no self-fixtures. This is only the feature-input metadata gate, not target-outcome evaluation.
+- Other 2026/27 metadata rows also lack `source_updated_at_utc`: EPL 116/116, Bundesliga 100/100, Eredivisie 124/124, Ligue 1 104/104, Primeira Liga 98/98 and RPL 8/8. La Liga has 0/134 missing that field. These rows are not source-before-quote proof.
+
+### Frozen scientific contract
+
+- Original candidate SHA-256 remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; 19 ordered features; 20×2 weights; 3,799 training rows.
+- `active_lambda=0` remains the market fallback; `shadow_lambda=1` remains research-only.
+- Feature-input metadata gate (minimum 30 unique completed Serie A fixtures) is satisfied by the current identity audit, but source capture remains unauthorized and no feature build/inference occurred.
+- Separate prospective target-outcome gate remains **0/30 / CLOSED**. No 2026/27 target outcomes were read, no Brier/LogLoss comparison was performed, and no superiority claim is made.
+- Historical stability gate remains FAILED. No weights, features, scaler/imputer, thresholds, candidate, production `.pkl`, schedules, other agents, Supabase data/schema, or main branch were changed.
+
+HUMAN-MERGE only. No provider account/key/request/download, paid API call, Supabase write/DDL, production artifact change, inference, refit, promotion or betting occurred.
