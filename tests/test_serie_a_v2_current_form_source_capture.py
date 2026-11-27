@@ -2,10 +2,13 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 import hashlib
+import json
 
 import pandas as pd
 import pytest
 
+import serie_a_v2_current_form_source_capture as source_capture
+from market_anchor_1x2_v2_shadow import FIRST_OUTCOME_READ_GATE, outcome_read_permitted
 from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE,
     CURRENT_FILENAME,
@@ -18,6 +21,7 @@ from serie_a_v2_current_form_source_capture import (
     count_unique_completed_primary_events,
     read_completed_primary_event_count,
     validate_current_season_csv,
+    validate_preregistered_outcome_read_gate,
 )
 from serie_a_v2_live_diagnostic_report import _source_codes
 
@@ -99,6 +103,47 @@ def test_live_feature_gate_query_selects_only_fixture_metadata_not_scores():
     )
     assert count == 30
     assert client.selected == "match_date,home_team,away_team"
+
+
+def test_feature_source_gate_is_exactly_the_preregistered_v2_outcome_read_gate():
+    protocol_path = Path(__file__).resolve().parents[1] / "experiments" / "market_anchor_1x2_v2_protocol.json"
+    protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
+    assert FIRST_OUTCOME_READ_GATE == 30
+    assert MIN_COMPLETED_FEATURE_SOURCE_EVENTS == FIRST_OUTCOME_READ_GATE
+    assert protocol["first_outcome_read_gate"]["completed_primary_events"] == FIRST_OUTCOME_READ_GATE
+    assert protocol["first_outcome_read_gate"]["outcome_read_before_gate"] is False
+    assert protocol["primary_cohort"]["league"] == "SERIE_A"
+    assert protocol["primary_cohort"]["other_leagues_count_toward_gate"] is False
+    assert outcome_read_permitted(29) is False
+    assert outcome_read_permitted(30) is True
+    contract = validate_preregistered_outcome_read_gate()
+    assert contract["protocol_blob_sha1"] == source_capture.PREREGISTERED_PROTOCOL_BLOB_SHA1
+    assert contract["required_completed_primary_events"] == 30
+
+
+def test_changed_preregistered_protocol_fails_before_metadata_or_source_access(tmp_path, monkeypatch):
+    bad_protocol = tmp_path / "protocol.json"
+    bad_protocol.write_text('{"first_outcome_read_gate":{"completed_primary_events":29}}', encoding="utf-8")
+    monkeypatch.setattr(source_capture, "PROTOCOL_PATH", bad_protocol)
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            raise AssertionError("Supabase metadata must not be read after protocol mismatch")
+
+    def forbidden_history(**_kwargs):
+        raise AssertionError("historical source must not be downloaded after protocol mismatch")
+
+    def forbidden_get(*_args, **_kwargs):
+        raise AssertionError("current-season outcomes must not be requested after protocol mismatch")
+
+    with pytest.raises(RuntimeError, match="protocol blob changed"):
+        capture_source_archive(
+            output_dir=tmp_path / "out",
+            client=ForbiddenClient(),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=forbidden_get,
+            history_fetch=forbidden_history,
+        )
 
 
 def test_current_csv_uses_only_completed_rows_strictly_before_capture_day():
@@ -191,6 +236,13 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["feature_source_gate"]["passed"] is True
     assert report["feature_source_gate"]["observed_completed_primary_events"] == 30
     assert report["feature_source_gate"]["score_or_result_fields_selected_for_gate"] is False
+    assert report["feature_source_gate"]["uses_exact_preregistered_outcome_read_gate"] is True
+    assert report["preregistered_outcome_read_gate"]["passed"] is True
+    assert report["preregistered_outcome_read_gate"]["required_completed_primary_events"] == 30
+    assert report["preregistered_outcome_read_gate"]["observed_completed_primary_events"] == 30
+    assert report["current_season_completed_match_results_read_for_lagged_features"] is True
+    assert report["target_outcomes_read_for_evaluation"] is False
+    assert "after the preregistered 30-primary-event gate" in report["target_outcomes_read_scope"]
     assert report["historical_old_season_file_count"] == 10
     assert report["source_file_count"] == 11
     assert report["current_season_code"] == CURRENT_CODE == "2627"
