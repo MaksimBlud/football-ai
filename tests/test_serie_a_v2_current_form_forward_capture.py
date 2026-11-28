@@ -321,6 +321,7 @@ def test_unverified_parent_cannot_admit_quote():
 def test_main_verifies_latest_source_archive_before_creating_quote_reader(tmp_path, monkeypatch):
     """The live entrypoint must attest the prior source archive before any quote read."""
     import sys
+    import serie_a_v2_current_form_forward_capture as forward_capture
 
     events = []
     output = tmp_path / "forward.json"
