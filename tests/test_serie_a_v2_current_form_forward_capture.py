@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
 from io import BytesIO
 import hashlib
 import json
@@ -30,6 +30,15 @@ ARCHIVE_DECLARED = "2026-10-18T06:30:00+00:00"
 ARTIFACT_CREATED = datetime(2026, 10, 18, 6, 31, tzinfo=timezone.utc)
 PARENT_CREATED = "2026-10-18T06:00:00+00:00"
 PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
+
+class _NoUtcOffset(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+
 
 
 @pytest.fixture(autouse=True)
@@ -798,3 +807,25 @@ def test_current_form_forward_cli_checks_provider_rights_before_argument_or_cred
 
     with pytest.raises(PermissionError, match="source capture rights unresolved"):
         forward_capture.main()
+
+def test_current_form_forward_clocks_reject_tzinfo_without_real_offset_before_callbacks():
+    invalid_clock = datetime(2026, 10, 19, 5, 40, tzinfo=_NoUtcOffset())
+    calls = []
+
+    with pytest.raises(ValueError, match="real UTC offset"):
+        verify_latest_source_archive(
+            [],
+            as_of_utc=invalid_clock,
+            load_archive=lambda *_args: calls.append("archive"),
+            verify_parent_run=lambda *_args, **_kwargs: calls.append("parent"),
+        )
+    with pytest.raises(ValueError, match="real UTC offset"):
+        prepare_forward_capture(
+            [],
+            [],
+            as_of_utc=invalid_clock,
+            load_archive=lambda *_args: calls.append("archive"),
+            verify_parent_run=lambda *_args, **_kwargs: calls.append("parent"),
+        )
+    assert calls == []
+

@@ -28,8 +28,8 @@ def _require_v2_source_capture_access() -> dict:
 def attest_latest_source(*, token: str, now: datetime, discover=discover_archives,
                          load=get_archive, verify_run=verify_source_run) -> dict:
     _require_v2_source_capture_access()
-    if now.tzinfo is None:
-        raise ValueError("source attestation needs an aware UTC clock")
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("source attestation needs an aware UTC clock with a real UTC offset")
     at = now.astimezone(timezone.utc)
     archives = discover(token=token)
     eligible = [x for x in archives if x["created_at"] < at]

@@ -1,5 +1,5 @@
 """Free actual-source attestation behavior with synthetic pre-2026 history only."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 import hashlib
 from io import BytesIO
 import json
@@ -16,6 +16,16 @@ from serie_a_v2_prequote_source_archive_gate import ARCHIVE_REPORT, SOURCE_DIR
 
 
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
+
+
+class _NoUtcOffset(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+
 
 
 @pytest.fixture(autouse=True)
@@ -152,3 +162,16 @@ def test_invalid_datetime_is_not_silently_assumed_utc():
             discover=lambda **kwargs:meta,
             load=lambda *a,**kw:raw,verify_run=valid_parent,
         )
+
+def test_attestation_rejects_tzinfo_without_real_offset_before_discovery():
+    calls = []
+    with pytest.raises(ValueError, match="real UTC offset"):
+        attest_latest_source(
+            token="test-token",
+            now=datetime(2026, 10, 14, 16, tzinfo=_NoUtcOffset()),
+            discover=lambda **kwargs: calls.append("discover") or [],
+            load=lambda *args, **kwargs: calls.append("load"),
+            verify_run=lambda *args, **kwargs: calls.append("verify"),
+        )
+    assert calls == []
+
