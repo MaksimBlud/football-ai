@@ -994,3 +994,51 @@ def test_frozen_v2_shadow_test_workflow_uses_immutable_actions_and_no_persisted_
     checkout_block = "\\n".join(lines[checkout_index:checkout_end])
     assert "persist-credentials: false" in checkout_block
     assert "persist-credentials: true" not in checkout_block
+
+
+def test_v2_live_workflows_use_explicit_read_only_permissions():
+    """The live-access hold must not accidentally grant write-capable GitHub tokens."""
+    allowed_permissions = {"actions", "contents"}
+
+    for path in WORKFLOWS:
+        text = _workflow(path)
+        lines = text.splitlines()
+        starts = [i for i, line in enumerate(lines) if line == "permissions:"]
+        assert len(starts) == 1, (
+            f"{path}: exactly one explicit top-level permissions block is required"
+        )
+
+        start = starts[0]
+        end = next(
+            (
+                i for i in range(start + 1, len(lines))
+                if lines[i].strip() and not lines[i].startswith(" ")
+            ),
+            len(lines),
+        )
+        entries = [line for line in lines[start + 1:end] if line.strip()]
+        assert entries, f"{path}: explicit permissions block must not be empty"
+
+        seen = set()
+        for entry in entries:
+            match = re.fullmatch(r"  ([a-z-]+): read", entry)
+            assert match is not None, (
+                f"{path}: only explicit read-only token permissions are allowed: {entry!r}"
+            )
+            scope = match.group(1)
+            assert scope in allowed_permissions, (
+                f"{path}: unexpected GitHub token scope {scope!r}"
+            )
+            assert scope not in seen, f"{path}: duplicate token permission {scope!r}"
+            seen.add(scope)
+
+        assert not any(
+            re.match(r"^    permissions:", line) for line in lines
+        ), f"{path}: job-level permissions must not override the audited workflow scope"
+        assert not re.search(
+            r"^\\s*(?:actions|contents|id-token|pull-requests|checks|statuses|"
+            r"security-events|packages|deployments|issues|discussions|pages|"
+            r"attestations):\\s*write\\b",
+            text,
+            re.MULTILINE,
+        ), f"{path}: write-capable GitHub token permission detected"
