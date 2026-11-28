@@ -310,3 +310,62 @@ def test_asof_feature_cli_checks_provider_rights_before_argument_or_file_access(
 
     with pytest.raises(PermissionError, match="source capture rights unresolved"):
         feature_manifest.main()
+
+
+@pytest.mark.parametrize("helper", ["validate_history", "stats_asof"])
+@pytest.mark.parametrize("blocked_scope", ["source_capture", "inference"])
+def test_direct_asof_history_helpers_require_rights_before_inspecting_inputs(
+    monkeypatch, helper, blocked_scope
+):
+    calls = []
+
+    def source_rights():
+        calls.append("source_capture")
+        if blocked_scope == "source_capture":
+            raise PermissionError("source capture rights unresolved")
+        return {"scope_status": "SYNTHETIC_TEST_ONLY"}
+
+    def inference_access():
+        calls.append("inference")
+        if blocked_scope == "inference":
+            raise PermissionError("frozen inference access is held")
+        return {"access_scope": "SYNTHETIC_TEST_ONLY"}
+
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", source_rights)
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", inference_access)
+    untouched = _UntouchableFeatureInput()
+
+    with pytest.raises(PermissionError, match="rights unresolved|access is held"):
+        if helper == "validate_history":
+            feature_manifest._validate_history(untouched)
+        else:
+            feature_manifest._stats_asof(
+                untouched,
+                before_day=datetime(2026, 10, 13, tzinfo=timezone.utc),
+            )
+
+    assert calls == (
+        ["source_capture"]
+        if blocked_scope == "source_capture"
+        else ["source_capture", "inference"]
+    )
+
+
+def test_build_manifest_checks_rights_once_before_processing_a_batch(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        direct_access,
+        "require_v2_source_capture_rights",
+        lambda: calls.append("source_capture") or {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        direct_access,
+        "require_v2_inference_access",
+        lambda: calls.append("inference") or {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+
+    second_quote = {**QUOTE, "event_id": "test-v2-b", "home_team": "Beta", "away_team": "Alpha"}
+    report = build_manifest(history(), [QUOTE, second_quote])
+
+    assert len(report["feature_manifests"]) == 2
+    assert calls == ["source_capture", "inference"]

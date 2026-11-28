@@ -25,6 +25,14 @@ def _allow_synthetic_source_access_for_offline_tests(monkeypatch):
         direct_access, "require_v2_source_capture_access",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
     )
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_rights",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        direct_access, "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
 
 
 def source_fixture():

@@ -56,7 +56,8 @@ def _canonical(team: str) -> str:
     return V2_HISTORICAL_TEAM_ALIASES.get(known, known)
 
 
-def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
+def _validate_history_unchecked(history: pd.DataFrame) -> pd.DataFrame:
+    """Internal implementation; caller must already have passed the V2 rights gate."""
     missing = REQUIRED - set(history.columns)
     if missing:
         raise ValueError("historical source lacks required football stats: " + ", ".join(sorted(missing)))
@@ -83,8 +84,9 @@ def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
     return frame.sort_values(["_match_date", "_home", "_away"], kind="stable")
 
 
-def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque]:
-    """Strictly exclude ALL same-UTC-calendar-day matches: historic data have no reliable kickoff clock."""
+def _stats_asof_unchecked(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque]:
+    """Internal implementation; caller must already have passed the V2 rights gate."""
+    # Strictly exclude ALL same-UTC-calendar-day matches: historic data have no reliable kickoff clock.
     histories: dict[str, deque] = defaultdict(lambda: deque(maxlen=30))
     usable = frame.loc[frame["_match_date"] < pd.Timestamp(before_day.date())]
     for _, match in usable.iterrows():
@@ -105,6 +107,17 @@ def _require_asof_feature_access() -> dict:
     inference = direct_access.require_v2_inference_access()
     return {"source_capture": source_capture, "inference": inference}
 
+def _validate_history(history: pd.DataFrame) -> pd.DataFrame:
+    """Guarded direct-call wrapper for the internal historical-source validator."""
+    _require_asof_feature_access()
+    return _validate_history_unchecked(history)
+
+
+def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque]:
+    """Guarded direct-call wrapper for original V2 rolling-history construction."""
+    _require_asof_feature_access()
+    return _stats_asof_unchecked(frame, before_day=before_day)
+
 
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
     _require_asof_feature_access()
@@ -113,7 +126,7 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
     names = list(original["features"])
     if names != list(FEATURE_SETS["ALL_FOOTBALL"]):
         raise ValueError("original V2 feature order drift")
-    frame = _validate_history(history)
+    frame = _validate_history_unchecked(history)
     selected: dict[str, tuple[datetime, dict]] = {}
     for row in quotes:
         if row.get("league") != "SERIE_A":
@@ -140,7 +153,7 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
     manifests = []
     for event_id, (quote_time, row) in sorted(selected.items()):
         cutoff = datetime.combine(quote_time.date(), datetime.min.time(), tzinfo=timezone.utc)
-        histories = _stats_asof(frame, before_day=quote_time)
+        histories = _stats_asof_unchecked(frame, before_day=quote_time)
         home = _canonical(row["home_team"])
         away = _canonical(row["away_team"])
         # Exposure is descriptive, not a new trained feature/selection gate.
