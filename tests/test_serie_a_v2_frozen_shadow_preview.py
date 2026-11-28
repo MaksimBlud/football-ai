@@ -22,6 +22,7 @@ def _allow_synthetic_provider_inference_for_offline_tests(monkeypatch):
         v2_preview, "require_v2_inference_access",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
     )
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
 
 NOW = datetime(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
 KICKOFF = "2026-10-19T19:00:00Z"
