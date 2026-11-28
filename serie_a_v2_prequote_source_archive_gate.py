@@ -22,7 +22,7 @@ import market_anchor_v2_direct_access as direct_access
 
 from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA, parse_utc, _guard_outcome_free
-from serie_a_v2_asof_feature_manifest import REQUIRED, _validate_history
+from serie_a_v2_asof_feature_manifest import REQUIRED, _validate_history_unchecked
 
 ARCHIVE_REPORT = "serie_a_v2_real_quote_diagnostic.json"
 SOURCE_DIR = "serie_a_v2_source_capture/"
@@ -107,7 +107,7 @@ def _verify_archive_unchecked(archive_path: Path, quotes: list[Mapping[str, Any]
             if not REQUIRED.issubset(frame.columns):
                 raise ValueError("historical source statistics incomplete")
             frames.append(frame[list(REQUIRED)].copy())
-        historical = _validate_history(pd.concat(frames, ignore_index=True))
+        historical = _validate_history_unchecked(pd.concat(frames, ignore_index=True))
         if (historical["_match_date"] >= CUTOFF_DAY).any():
             raise ValueError("protected prospective season result in old-season CSV")
     if not source_times:
