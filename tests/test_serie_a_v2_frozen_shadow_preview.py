@@ -165,13 +165,20 @@ def test_fallback_uses_latest_qualified_observation_only():
         v2_preview.shadow_preview([market(),market()], [features()], as_of_utc=NOW)
 
 
-def test_read_only_saved_supabase_query_does_not_call_provider():
+def test_read_only_saved_supabase_query_does_not_call_provider(monkeypatch):
+    timeline = []
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    monkeypatch.setattr(
+        v2_preview, "require_private_repository",
+        lambda *, token: timeline.append(("private-repository-gate", token)),
+    )
     class Result:
         data = [market(created_at="2026-10-13T14:00:01Z")]
     class Q:
         def __init__(self):
             self.calls = []
         def select(self, v):
+            timeline.append(("select", v))
             self.calls.append(("select", v))
             assert "created_at" in v.split(",")
             return self
@@ -183,15 +190,30 @@ def test_read_only_saved_supabase_query_does_not_call_provider():
     class DB:
         def __init__(self): self.query=Q()
         def table(self, name):
+            timeline.append(("table", name))
             assert name=="odds_snapshots"
             return self.query
     db=DB()
     assert v2_preview.fetch_saved_upcoming_serie_a_quotes(db,now=NOW)==[
         market(created_at="2026-10-13T14:00:01Z")
     ]
+    assert timeline[0] == ("private-repository-gate", "synthetic-token")
+    assert timeline[1] == ("table", "odds_snapshots")
     assert [call[0] if isinstance(call, tuple) else call for call in db.query.calls] == [
         "select", "eq", "gt", "order", "limit", "execute"
     ]
+
+
+def test_saved_supabase_quote_reader_fails_closed_before_any_database_access(monkeypatch):
+    monkeypatch.delenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", raising=False)
+    calls = []
+    class DB:
+        def table(self, name):
+            calls.append(name)
+            raise AssertionError("database must not be accessed while V2 live access is held")
+    with pytest.raises(PermissionError, match="MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true"):
+        v2_preview.fetch_saved_upcoming_serie_a_quotes(DB(), now=NOW)
+    assert calls == []
 
 
 def test_research_no_promotion_or_outcome_read_source():
