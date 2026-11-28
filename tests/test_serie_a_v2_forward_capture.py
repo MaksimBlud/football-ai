@@ -23,6 +23,10 @@ def _allow_synthetic_provider_rights_for_offline_tests(monkeypatch):
         direct_access, "require_v2_inference_access",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
     )
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
