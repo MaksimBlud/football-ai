@@ -51,7 +51,10 @@ def test_free_original_v2_still_preserves_archive_proof_and_no_bet():
     assert "serie_a_v2_forward_capture.py" in free
     assert "--sources-output-dir" in free
     assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in free
-    assert "verify_archive(" in runner
+    assert "_verify_archive_unchecked(" in runner
+    archive_gate = Path("serie_a_v2_prequote_source_archive_gate.py").read_text(encoding="utf-8")
+    assert "def verify_archive(" in archive_gate
+    assert "require_v2_source_capture_access()" in archive_gate
     assert "github_artifact_sha256=" in runner
     assert '"eligible_for_frozen_prospective_cohort": False' in runner
     assert '"no_bet": True' in runner
