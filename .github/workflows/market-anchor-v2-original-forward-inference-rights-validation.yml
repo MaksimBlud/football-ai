@@ -45,6 +45,7 @@ on:
       - research/v2-source-capture-rights-scope-on-887-20261119-run11
       - research/v2-source-capture-explicit-validity-on-888-20261119-run11
       - research/v2-inference-rights-explicit-validity-on-889-20261119-run11
+      - research/v2-current-form-redirect-persisted-quote-restack-20261127-run11
       - research/v2-provider-rights-restack-on-990-20261128-run11
     paths:
       - "serie_a_v2_forward_capture.py"
