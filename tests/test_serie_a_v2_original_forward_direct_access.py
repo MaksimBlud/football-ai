@@ -8,6 +8,7 @@ import market_anchor_v2_direct_access as direct_access
 import market_anchor_v2_source_rights as source_rights
 import market_anchor_v2_source_capture_rights as source_capture_rights
 import serie_a_v2_forward_capture as original_forward
+import serie_a_v2_prequote_source_archive_gate as archive_gate
 
 
 NOW = datetime(2026, 11, 25, 0, 10, tzinfo=timezone.utc)
@@ -113,3 +114,60 @@ def test_original_forward_github_boundaries_deny_before_network_or_input_access(
         )
     with pytest.raises(PermissionError, match="provider inference scope is unresolved"):
         original_forward.get_archive(123, token="synthetic-token", get=_forbidden)
+
+
+def test_direct_archive_verifier_denies_before_path_or_quote_access(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setattr(source_capture_rights, "require_personal_research_source_capture_scope", _deny)
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _forbidden)
+
+    with pytest.raises(PermissionError, match="provider inference scope is unresolved"):
+        archive_gate.verify_archive(
+            _Forbidden(),
+            _Forbidden(),
+            as_of_utc=NOW,
+        )
+
+
+def test_archive_verifier_cli_denies_before_argument_or_file_access(monkeypatch):
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_access", _deny)
+
+    with pytest.raises(PermissionError, match="provider inference scope is unresolved"):
+        archive_gate.main()
+
+
+@pytest.mark.parametrize(
+    "entrypoint",
+    ["prepare_forward_capture", "capture_forward_with_source_preflight"],
+)
+def test_forward_entrypoints_require_private_source_access_before_callbacks(
+    monkeypatch, entrypoint
+):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setattr(
+        source_capture_rights,
+        "require_personal_research_source_capture_scope",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _deny)
+    blocked_dir = __import__("pathlib").Path("/tmp/v2-private-source-must-not-be-created")
+
+    with pytest.raises(PermissionError, match="provider inference scope is unresolved"):
+        if entrypoint == "prepare_forward_capture":
+            original_forward.prepare_forward_capture(
+                _Forbidden(),
+                _Forbidden(),
+                as_of_utc=NOW,
+                load_archive=_forbidden,
+                verify_parent_run=_forbidden,
+                write_archives_to=blocked_dir,
+            )
+        else:
+            original_forward.capture_forward_with_source_preflight(
+                _Forbidden(),
+                as_of_utc=NOW,
+                fetch_quotes=_forbidden,
+                load_archive=_forbidden,
+                verify_parent_run=_forbidden,
+                write_archives_to=blocked_dir,
+            )
