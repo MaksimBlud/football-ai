@@ -317,3 +317,83 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+def test_main_verifies_latest_source_archive_before_creating_quote_reader(tmp_path, monkeypatch):
+    """The live entrypoint must attest the prior source archive before any quote read."""
+    import sys
+    import serie_a_v2_current_form_forward_capture as forward_capture
+
+    events = []
+    output = tmp_path / "forward.json"
+    sources = tmp_path / "sources"
+
+    def fake_discover_archives(*, token):
+        assert token == "test-github-token"
+        events.append("discover_archives")
+        return []
+
+    def fake_verify_latest(archives, *, as_of_utc, load_archive, verify_parent_run, write_sources_to):
+        assert archives == []
+        assert write_sources_to == sources
+        assert callable(load_archive)
+        assert callable(verify_parent_run)
+        events.append("verify_source_archive")
+        return {"status": "NO_SOURCE_ARCHIVE", "verified": False}
+
+    def fake_create_client(url, key):
+        assert url == "https://example.supabase.co"
+        assert key == "read-only-test-key"
+        events.append("create_quote_client")
+        return object()
+
+    def fake_read_quotes(client, *, now):
+        assert client is not None
+        events.append("read_saved_quotes")
+        return []
+
+    def fake_prepare(quotes, archives, **kwargs):
+        assert quotes == []
+        assert archives == []
+        events.append("prepare_forward_capture")
+        return {
+            "mode": "READ_ONLY_PREKICKOFF_SHADOW_NO_BET",
+            "candidate_sha256": forward_capture.FROZEN_SHA,
+            "quotes_seen": 0,
+            "v2_current_form_shadow_captured": 0,
+            "blocked": {},
+            "target_outcomes_read": False,
+            "target_outcomes_scored": False,
+            "paid_provider_calls": 0,
+            "production_or_supabase_writes": 0,
+            "no_bet": True,
+        }
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", forward_capture.REPOSITORY)
+    monkeypatch.setenv("GITHUB_REF", "refs/heads/main")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-github-token")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_KEY", "read-only-test-key")
+    monkeypatch.setattr(sys, "argv", [
+        "serie_a_v2_current_form_forward_capture.py",
+        "--output", str(output),
+        "--sources-output-dir", str(sources),
+    ])
+    monkeypatch.setattr(forward_capture, "discover_archives", fake_discover_archives)
+    monkeypatch.setattr(forward_capture, "verify_latest_source_archive", fake_verify_latest)
+    monkeypatch.setattr(forward_capture, "create_client", fake_create_client)
+    monkeypatch.setattr(forward_capture, "fetch_saved_upcoming_serie_a_quotes", fake_read_quotes)
+    monkeypatch.setattr(forward_capture, "prepare_forward_capture", fake_prepare)
+
+    forward_capture.main()
+
+    assert events == [
+        "discover_archives",
+        "verify_source_archive",
+        "create_quote_client",
+        "read_saved_quotes",
+        "prepare_forward_capture",
+    ]
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    assert saved["latest_source_archive_verification"]["status"] == "NO_SOURCE_ARCHIVE"
+    assert saved["quotes_seen"] == 0
+
