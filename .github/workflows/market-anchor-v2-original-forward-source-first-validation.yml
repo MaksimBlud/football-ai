@@ -15,12 +15,12 @@ on:
       - research/v2-asof-utc-day-normalization-on-1002-20261128-run11
       - research/v2-original-forward-private-preflight-direct-helpers-on-1003-20261128-run11
       - research/v2-current-form-real-utc-offset-guards-on-1004-20261128-run11
+      - research/v2-original-forward-validation-pathfilter-on-1005-20261128-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
-      - "tests/test_serie_a_v2_original_forward_direct_access.py"
       - "tests/test_serie_a_v2_original_forward_direct_access.py"
       - "serie_a_v2_current_form_forward_capture.py"
       - "serie_a_v2_asof_feature_manifest.py"
@@ -65,6 +65,7 @@ on:
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "tests/test_serie_a_v2_original_forward_direct_access.py"
       - "serie_a_v2_current_form_forward_capture.py"
       - "serie_a_v2_asof_feature_manifest.py"
       - "tests/test_serie_a_v2_asof_feature_manifest.py"
