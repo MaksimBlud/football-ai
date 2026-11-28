@@ -16,6 +16,11 @@ on:
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "market_anchor_v2_direct_access.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
       - "tests/test_serie_a_v2_forward_runtime_lock.py"
       - "research/locks/market-anchor-v2-forward-py311.lock"
       - "research/locks/market-anchor-v2-forward-py312.lock"
@@ -35,6 +40,11 @@ on:
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_live_diagnostic_report.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "market_anchor_v2_direct_access.py"
+      - "market_anchor_v2_source_capture_rights.py"
+      - "market_anchor_v2_artifact_privacy.py"
+      - "research/source_rights/football_data_co_uk.json"
+      - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
       - "tests/test_serie_a_v2_forward_runtime_lock.py"
       - "research/locks/market-anchor-v2-forward-py311.lock"
       - "research/locks/market-anchor-v2-forward-py312.lock"
@@ -89,6 +99,7 @@ jobs:
             serie_a_v2_current_form_source_capture.py \
             market_anchor_v2_direct_access.py \
             market_anchor_v2_source_capture_rights.py \
+            market_anchor_v2_artifact_privacy.py \
             serie_a_v2_attest_real_source.py \
             serie_a_v2_prequote_source_archive_gate.py \
             serie_a_v2_live_diagnostic_report.py \
