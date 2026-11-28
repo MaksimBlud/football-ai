@@ -28,7 +28,7 @@ All four runs below were re-read from the GitHub Actions API and their job logs.
    - quotes_seen=0, future_quotes_checked=0, forecasts_created=0, v2_diagnostic_previews_captured=0; 0 paid calls and 0 Supabase writes.
    - Small public report artifact #15221678888, SHA-256 999dc3238e8efb37d8b8f404beee17378c709f6ce116a9a674e301d4014366bf (1,460 bytes).
 2. Current-Form Source Capture run #46026789681:
-   - 19 tests passed; the metadata-only feature-input gate counted 120 canonical completed primary-event identities.
+   - 19 tests passed; main reported 120 canonical completed primary-event identities, but treat this count as provisional: main still truncates timestamp-bearing dates and does not reject reversed home/away duplicates after V2-local alias normalization. Separate Draft PR #966 (child of #958, exact HEAD b086251e58eb78af018dd5159231c0f7cfa68bb2) carries the strict date-only and orientation audit; its exact run #45640158400 passed 543 tests on Python 3.11 and 543 on Python 3.12. #966 is not in the #989/#990 ancestry, so do not treat the main-reported 120 as fully validated until #966 or an equivalent restack is integrated.
    - Captured 10 frozen historical CSVs plus one current-season CSV (11 files); no evaluation scoring, 0 paid calls, 0 Supabase writes.
    - Public Actions artifact #15211304625, 440,660 bytes, SHA-256 d7e2a644ac8659ef6de97a3be35f2e091ef5787fb657d5fa5dfdcb6bbaad2af5.
    - This is not permission to use Football-Data: automated AI-use rights remain HOLD in #958, and the repository/artifact storage was public. The artifact was not downloaded in this audit.
