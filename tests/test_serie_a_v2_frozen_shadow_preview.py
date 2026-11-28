@@ -9,6 +9,15 @@ import pytest
 
 import market_anchor_1x2_v2_shadow as v2
 import serie_a_v2_frozen_shadow_preview as v2_preview
+import market_anchor_v2_direct_access as direct_access
+
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_provider_inference_for_offline_tests(monkeypatch):
+    monkeypatch.setattr(
+        v2_preview, "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
 
 NOW = datetime(2026, 10, 13, 15, 0, tzinfo=timezone.utc)
 KICKOFF = "2026-10-19T19:00:00Z"
