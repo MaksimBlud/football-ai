@@ -10,7 +10,7 @@ from market_anchor_v2_source_rights import (
     require_ai_model_training_permission,
 )
 
-NOW = datetime(2026, 11, 25, 0, 10, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 28, 16, 0, tzinfo=timezone.utc)
 
 
 def _write_grant(
@@ -26,21 +26,29 @@ def _write_grant(
     evidence = tmp_path / "provider-permission.txt"
     body = b"synthetic provider-issued AI training permission; tests only"
     evidence.write_bytes(body)
-    policy_evidence = tmp_path / "football_data_contact_fair_use_20261124.md"
-    policy_evidence_bytes = b"synthetic fair-use policy evidence for tests only"
-    policy_evidence.write_bytes(policy_evidence_bytes)
+    data_policy_evidence = tmp_path / "football_data_data_page.md"
+    data_policy_evidence_bytes = (
+        f"synthetic data-page policy evidence updated {policy_page_updated_date}".encode()
+    )
+    data_policy_evidence.write_bytes(data_policy_evidence_bytes)
+    fair_use_policy_evidence = tmp_path / "football_data_contact_fair_use_20261127.md"
+    fair_use_policy_evidence_bytes = b"synthetic fair-use policy evidence for tests only"
+    fair_use_policy_evidence.write_bytes(fair_use_policy_evidence_bytes)
     manifest = {
         "schema_version": "FOOTBALL_AI_SOURCE_RIGHTS_V1",
         "provider": "Football-Data.co.uk",
         "policy_url": "https://football-data.co.uk/data",
         "policy_checked_at_utc": "2026-11-10T11:57:30Z",
         "policy_page_updated_date": policy_page_updated_date,
+        "policy_evidence_file": data_policy_evidence.name,
+        "policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES",
+        "policy_evidence_sha256": hashlib.sha256(data_policy_evidence_bytes).hexdigest(),
         "fair_use_policy_url": "https://football-data.co.uk/contact.php",
-        "fair_use_policy_checked_at_utc": "2026-11-24T23:52:28Z",
-        "fair_use_policy_page_updated_date": "2026-11-24",
-        "fair_use_policy_evidence_file": policy_evidence.name,
+        "fair_use_policy_checked_at_utc": "2026-11-28T15:52:17Z",
+        "fair_use_policy_page_updated_date": "2026-11-27",
+        "fair_use_policy_evidence_file": fair_use_policy_evidence.name,
         "fair_use_policy_evidence_kind": "LOCAL_PARAPHRASE_NOTE_NOT_PROVIDER_PAGE_BYTES",
-        "fair_use_policy_evidence_sha256": hashlib.sha256(policy_evidence_bytes).hexdigest(),
+        "fair_use_policy_evidence_sha256": hashlib.sha256(fair_use_policy_evidence_bytes).hexdigest(),
         "rights_status": "GRANTED",
         "ai_model_training_permitted": True,
         "research_use_permitted": True,
@@ -146,8 +154,15 @@ def test_policy_update_cannot_postdate_training_permission_review(tmp_path):
 
 def test_training_fair_use_policy_evidence_sha_mismatch_fails_closed(tmp_path):
     path, _ = _write_grant(tmp_path)
-    (tmp_path / "football_data_contact_fair_use_20261124.md").write_text(
+    (tmp_path / "football_data_contact_fair_use_20261127.md").write_text(
         "tampered", encoding="utf-8"
     )
     with pytest.raises(PermissionError, match="fair-use policy evidence SHA-256 mismatch"):
+        require_ai_model_training_permission(path, repo_root=tmp_path, now=NOW)
+
+
+def test_training_data_page_policy_evidence_sha_mismatch_fails_closed(tmp_path):
+    path, _ = _write_grant(tmp_path)
+    (tmp_path / "football_data_data_page.md").write_text("tampered", encoding="utf-8")
+    with pytest.raises(PermissionError, match="data-page policy evidence SHA-256 mismatch"):
         require_ai_model_training_permission(path, repo_root=tmp_path, now=NOW)
