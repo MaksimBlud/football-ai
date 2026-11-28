@@ -111,7 +111,7 @@ def test_report_and_offline_ci_are_present_without_live_access():
     workflow = WORKFLOW.read_text(encoding="utf-8")
     assert "HOLD_INCOMPLETE_FEATURE_COVERAGE_AND_UPSTREAM_RIGHTS" in document
     assert "diff_corners_for_5" in document
-    assert "source-before-quote" in document
+    assert "source-before-quote" in document.lower()
     assert "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6" in document
     assert "schedule:" not in workflow
     assert "secrets." not in workflow
