@@ -371,6 +371,11 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["current_season_code"] == CURRENT_CODE == "2627"
     assert report["current_season"] == CURRENT_SEASON == "2026-2027"
     assert report["current_season_completed_prior_day_rows"] == 30
+    assert report["current_season_source_identity_audit"]["canonical_unique_fixture_identities"] == 30
+    assert (
+        report["current_season_source_identity_audit"]["canonical_fixture_identity_set_sha256"]
+        == report["feature_source_gate"]["identity_audit"]["canonical_fixture_identity_set_sha256"]
+    )
     assert report["current_season_source_sha256"] == hashlib.sha256(raw).hexdigest()
     assert (tmp_path / CURRENT_FILENAME).read_bytes() == raw
     assert (tmp_path / MANIFEST_FILENAME).exists()
@@ -379,6 +384,33 @@ def test_gate_open_captures_11_sources_and_keeps_target_evaluation_closed(tmp_pa
     assert report["target_outcome_evaluation_gate"]["outcome_gate_open"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["model_refit_or_promotion"] is False
+
+
+def test_capture_rejects_same_count_source_identity_mismatch_before_archive_publication(tmp_path):
+    raw = current_csv(n=30).replace(b"Home 0", b"Different Home 0", 1)
+    source_times = iter([
+        datetime(2026, 10, 18, 8, 1, tzinfo=timezone.utc),
+        datetime(2026, 10, 18, 8, 2, tzinfo=timezone.utc),
+    ])
+
+    class Response:
+        status_code = 200
+        url = CURRENT_URL
+        content = raw
+
+        def raise_for_status(self):
+            return None
+
+    with pytest.raises(ValueError, match="identity set"):
+        capture_source_archive(
+            output_dir=tmp_path,
+            client=FakeQuery(event_rows(30)),
+            now=datetime(2026, 10, 18, 8, tzinfo=timezone.utc),
+            get=lambda url, timeout, allow_redirects=False: Response(),
+            history_fetch=_write_historical_capture_sources,
+            clock=lambda: next(source_times),
+        )
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_source_capture_workflow_is_default_deny_and_preserves_existing_schedule():
@@ -767,6 +799,28 @@ def test_gate_identity_audit_reconciles_aliases_and_rejects_reversed_duplicates(
     ]
     with pytest.raises(ValueError, match="reversed duplicate"):
         summarize_completed_primary_events(reversed_rows, before_date=date(2026, 10, 18))
+
+
+def test_gate_and_current_csv_identity_hash_share_alias_normalization():
+    metadata = [{
+        "match_date": "2026-08-01",
+        "home_team": "Atalanta BC",
+        "away_team": "Napoli",
+    }]
+    frame = pd.DataFrame([{
+        "Date": "01/08/2026",
+        "HomeTeam": "Atalanta",
+        "AwayTeam": "Napoli",
+    }])
+    metadata_audit = summarize_completed_primary_events(
+        metadata, before_date=date(2026, 10, 18)
+    )
+    csv_audit = source_capture._current_season_fixture_identity_audit(frame)
+    assert metadata_audit["canonical_unique_fixture_identities"] == 1
+    assert (
+        metadata_audit["canonical_fixture_identity_set_sha256"]
+        == csv_audit["canonical_fixture_identity_set_sha256"]
+    )
 
 
 @pytest.mark.parametrize(

@@ -32,7 +32,7 @@ from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_
 
 REPOSITORY = "MaksimBlud/football-ai"
 WORKFLOW_PATH = ".github/workflows/serie-a-v2-current-form-source-capture.yml"
-SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
+SCHEMA_VERSION = "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V2"
 CURRENT_CODE = SERIE_A_RUNTIME_CONFIG.finished_results_source.season_code
 CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
@@ -113,6 +113,19 @@ def _canonical_team(value: Any) -> str:
     return V2_ONLY_ALIASES.get(known, known)
 
 
+def _fixture_identity_set_sha256(identities: set[tuple[str, str, str]]) -> str:
+    payload = json.dumps(
+        {
+            "schema": "SERIE_A_V2_CANONICAL_FIXTURE_IDENTITIES_V1",
+            "identities": sorted(identities),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def summarize_completed_primary_events(
     rows: list[Mapping[str, Any]], *, before_date: date
 ) -> dict[str, Any]:
@@ -191,6 +204,7 @@ def summarize_completed_primary_events(
         "metadata_rows_on_or_after_cutoff": len(rows) - eligible_rows,
         "raw_unique_fixture_identities": raw_unique_count,
         "canonical_unique_fixture_identities": canonical_unique_count,
+        "canonical_fixture_identity_set_sha256": _fixture_identity_set_sha256(canonical_unique),
         "exact_duplicate_metadata_rows": eligible_rows - raw_unique_count,
         "alias_collapsed_duplicate_identities": raw_unique_count - canonical_unique_count,
         "alias_collision_count": len(alias_collision_examples),
@@ -370,6 +384,25 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
     return result, source_row_count - len(completed)
 
+
+def _current_season_fixture_identity_audit(frame: pd.DataFrame) -> dict[str, Any]:
+    """Hash the exact canonical date/home/away identities in validated current-season rows."""
+    identities: set[tuple[str, str, str]] = set()
+    for row in frame.itertuples(index=False):
+        match_date = datetime.strptime(str(row.Date), "%d/%m/%Y").date().isoformat()
+        home = _canonical_team(row.HomeTeam)
+        away = _canonical_team(row.AwayTeam)
+        if home == away:
+            raise ValueError("current-season source has identical canonical teams")
+        identities.add((match_date, home, away))
+    if len(identities) != len(frame):
+        raise ValueError("current-season source identity audit found duplicate fixtures")
+    return {
+        "canonical_unique_fixture_identities": len(identities),
+        "canonical_fixture_identity_set_sha256": _fixture_identity_set_sha256(identities),
+    }
+
+
 def _capture_source_archive_unchecked(
     *,
     output_dir: Path,
@@ -449,6 +482,15 @@ def _capture_source_archive_contents_unchecked(
     raw = response.content
     observed_at = _clock_utc(clock, field="current-season source observation clock")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
+    current_identity_audit = _current_season_fixture_identity_audit(current_rows)
+    if (
+        current_identity_audit["canonical_unique_fixture_identities"] != gate_count
+        or current_identity_audit["canonical_fixture_identity_set_sha256"]
+        != gate_identity_audit.get("canonical_fixture_identity_set_sha256")
+    ):
+        raise ValueError(
+            "current-season source fixture identity set does not match completed-event gate metadata"
+        )
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
             "public current-season source has fewer completed prior-day matches than the feature-source gate"
@@ -488,6 +530,7 @@ def _capture_source_archive_contents_unchecked(
         "current_season_source_sha256": hashlib.sha256(raw).hexdigest(),
         "current_season_source_observed_at_utc": observed_at.isoformat(),
         "current_season_completed_prior_day_rows": len(current_rows),
+        "current_season_source_identity_audit": current_identity_audit,
         "current_season_total_csv_rows": audits[-1]["total_source_rows"],
         "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
         "preregistered_outcome_read_gate": {
