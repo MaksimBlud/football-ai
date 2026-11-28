@@ -34,6 +34,7 @@ from serie_a_v2_frozen_shadow_preview import (
 )
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 from serie_a_v2_prequote_source_archive_gate import MAX_ZIP_BYTES
+import market_anchor_v2_direct_access as direct_access
 from serie_a_v2_live_access_guard import require_private_repository
 
 REPOSITORY = "MaksimBlud/football-ai"
@@ -45,6 +46,13 @@ MAX_QUOTE_AGE = timedelta(hours=24)
 MAX_SOURCE_AGE = timedelta(hours=24)
 MAX_ARCHIVE_BYTES = 16_000_000
 OLD_CUTOFF = pd.Timestamp("2026-07-01")
+
+
+def _require_current_form_forward_rights() -> dict:
+    """Require both distinct provider scopes before inspecting source or quote inputs."""
+    source_capture = direct_access.require_v2_source_capture_rights()
+    inference = direct_access.require_v2_inference_rights()
+    return {"source_capture": source_capture, "inference": inference}
 
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
@@ -65,6 +73,7 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    _require_current_form_forward_rights()
     # Direct callers must not inspect source-artifact metadata while storage is public.
     require_private_repository(token=token, get=get)
     out, seen_ids = [], set()
@@ -105,6 +114,7 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
 def verify_source_run(
     archive: Mapping[str, Any], *, quote_time: datetime, token: str, get=requests.get
 ) -> dict:
+    _require_current_form_forward_rights()
     run_id = archive.get("run_id")
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source artifact lacks parent workflow run")
@@ -162,6 +172,7 @@ def _validated_artifact_download_location(location: Any) -> str:
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    _require_current_form_forward_rights()
     # Validate local arguments before the owner-controlled network guard.
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
@@ -209,6 +220,7 @@ def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, dict]:
+    _require_current_form_forward_rights()
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     digest = hashlib.sha256(raw).hexdigest()
@@ -340,6 +352,7 @@ def verify_latest_source_archive(
     write_sources_to: Path | None = None,
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
+    _require_current_form_forward_rights()
     if as_of_utc.tzinfo is None:
         raise ValueError("source verification clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -440,6 +453,7 @@ def prepare_forward_capture(
     verify_parent_run,
     write_sources_to: Path | None = None,
 ) -> dict:
+    _require_current_form_forward_rights()
     if as_of_utc.tzinfo is None:
         raise ValueError("current-form forward clock must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -616,6 +630,7 @@ def prepare_forward_capture(
 
 
 def main() -> None:
+    _require_current_form_forward_rights()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sources-output-dir", type=Path, required=True)
