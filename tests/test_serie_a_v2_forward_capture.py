@@ -8,6 +8,8 @@ import sys
 
 import serie_a_v2_forward_capture as forward_capture
 import market_anchor_v2_direct_access as direct_access
+
+_REAL_REQUIRE_SOURCE_CAPTURE_ACCESS = direct_access.require_v2_source_capture_access
 import serie_a_v2_frozen_shadow_preview as frozen_preview
 import serie_a_v2_live_diagnostic_report as live_diagnostic
 import pytest
@@ -21,6 +23,10 @@ def _allow_synthetic_provider_rights_for_offline_tests(monkeypatch):
     )
     monkeypatch.setattr(
         direct_access, "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_access",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
     )
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
@@ -355,6 +361,10 @@ def _fully_verified_parent(archive, quote_time, completed="2026-10-13T15:01:00Z"
 
 def test_original_forward_live_access_defaults_to_denied_before_any_callback(monkeypatch):
     monkeypatch.delenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", raising=False)
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_access",
+        _REAL_REQUIRE_SOURCE_CAPTURE_ACCESS,
+    )
     calls = []
     with pytest.raises(PermissionError, match="MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true"):
         capture_forward_with_source_preflight(
