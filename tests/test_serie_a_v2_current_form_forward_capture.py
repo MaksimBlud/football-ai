@@ -5,6 +5,7 @@ import json
 import zipfile
 
 import pytest
+import market_anchor_v2_direct_access as direct_access
 
 from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
@@ -34,6 +35,7 @@ PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
 def _allow_synthetic_provider_rights_for_offline_current_form_tests(monkeypatch):
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
 HEAD = "a" * 40
 
 

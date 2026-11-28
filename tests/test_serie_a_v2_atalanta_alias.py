@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
+import market_anchor_v2_direct_access as direct_access
 
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import load_verified_original, shadow_preview
@@ -17,6 +18,7 @@ import serie_a_v2_frozen_shadow_preview as frozen_preview
 def _allow_synthetic_provider_rights_for_offline_alias_tests(monkeypatch):
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
 
 BASE = {"HC": 5, "AC": 4, "HY": 2, "AY": 1, "HR": 0, "AR": 0}
 ASOF = datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)

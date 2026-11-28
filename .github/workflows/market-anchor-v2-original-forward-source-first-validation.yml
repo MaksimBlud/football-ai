@@ -7,6 +7,7 @@ on:
       - research/v2-original-forward-private-redirect-restacked-on-981-20261127-run11
       - research/v2-original-forward-runtime-lock-20261127-run11
       - research/v2-current-form-identity-restack-on-991-20261128-run11
+      - research/v2-frozen-candidate-restack-on-992-20261128-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
@@ -15,7 +16,22 @@ on:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_v2_saved_cohort_replay.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_provider_policy_evidence.py"
+      - "historical_football_signal_lab.py"
+      - "market_anchor_1x2_v1.py"
+      - "serie_a_runtime_config.py"
+      - "experiments/market_anchor_1x2_v1_report.json"
+      - "experiments/market_anchor_1x2_v1_robustness_report.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "tests/test_market_anchor_1x2_v2_shadow.py"
+      - "tests/test_market_anchor_v2_saved_cohort_replay.py"
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_source_capture_rights.py"
       - "market_anchor_v2_artifact_privacy.py"
@@ -39,7 +55,22 @@ on:
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
       - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_prequote_source_archive_gate.py"
+      - "tests/test_serie_a_v2_prequote_source_archive_gate.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "market_anchor_1x2_v2_shadow.py"
+      - "market_anchor_v2_saved_cohort_replay.py"
+      - "market_anchor_v2_source_rights.py"
+      - "market_anchor_v2_provider_policy_evidence.py"
+      - "historical_football_signal_lab.py"
+      - "market_anchor_1x2_v1.py"
+      - "serie_a_runtime_config.py"
+      - "experiments/market_anchor_1x2_v1_report.json"
+      - "experiments/market_anchor_1x2_v1_robustness_report.json"
+      - "experiments/market_anchor_1x2_v2_protocol.json"
+      - "research/models/market_anchor_v2_serie_a_frozen_candidate.json"
+      - "tests/test_market_anchor_1x2_v2_shadow.py"
+      - "tests/test_market_anchor_v2_saved_cohort_replay.py"
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_source_capture_rights.py"
       - "market_anchor_v2_artifact_privacy.py"
@@ -99,6 +130,10 @@ jobs:
             serie_a_v2_current_form_forward_capture.py \
             serie_a_v2_current_form_source_capture.py \
             market_anchor_v2_direct_access.py \
+            market_anchor_v2_source_rights.py \
+            market_anchor_v2_provider_policy_evidence.py \
+            market_anchor_1x2_v2_shadow.py \
+            market_anchor_v2_saved_cohort_replay.py \
             market_anchor_v2_source_capture_rights.py \
             market_anchor_v2_artifact_privacy.py \
             serie_a_v2_attest_real_source.py \
@@ -119,6 +154,8 @@ jobs:
             tests/test_serie_a_v2_asof_feature_manifest.py \
             tests/test_serie_a_v2_atalanta_alias.py \
             tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_market_anchor_1x2_v2_shadow.py \
+            tests/test_market_anchor_v2_saved_cohort_replay.py \
             tests/test_serie_a_v2_forward_runtime_lock.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
