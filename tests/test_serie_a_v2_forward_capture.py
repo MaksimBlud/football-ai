@@ -588,6 +588,11 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
             "run_id": archive["run_id"],
             "run_head_sha": archive["head_sha"],
             "workflow_path": SOURCE_WORKFLOW_PATH,
+            "head_branch": "main",
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "run_created_at_utc": "2026-10-13T14:40:00Z",
             "run_completed_at_utc": "2026-10-13T15:01:00Z",
         }
 
