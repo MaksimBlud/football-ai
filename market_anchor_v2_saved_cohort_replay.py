@@ -22,6 +22,12 @@ import numpy as np
 import pandas as pd
 import requests
 
+from market_anchor_v2_source_rights import require_ai_model_training_permission
+from market_anchor_v2_direct_access import (
+    require_v2_inference_access,
+    require_v2_source_capture_access,
+)
+
 EXPERIMENT_ID = "MARKET_ANCHOR_V2_SAVED_COHORT_REPLAY"
 EVIDENCE_CLASS = "POST_OUTCOME_DIAGNOSTIC_REPLAY"
 FROZEN_V2_COMMIT = "df19777087fb89af049eedce44ff93f0aa6e6360"
@@ -59,62 +65,28 @@ SOURCE_NAME = {
 }
 RESULT_TO_INT = {"H": 0, "D": 1, "A": 2}
 
-# Market probabilities are the exact 2026-09-11 saved MARKET_ONLY ledger rows used
-# by the parent 47-event replay. Old-model probabilities come from the frozen
-# POINT_IN_TIME_CROSS_LEAGUE_REPLAY_V1 manifest. Outcomes are now known and are
-# used only for this explicitly post-outcome diagnostic.
-TARGETS: tuple[dict[str, Any], ...] = (
-    {
-        "event_id": "a9656d25ca6b06be9e477a098333bd70", "home": "Venezia", "away": "Fiorentina", "result": "A",
-        "market": [0.347195829018205, 0.281422174186932, 0.371381996794863],
-        "old_model": [0.2372110003648549, 0.2243963446558066, 0.5383926549793384],
-    },
-    {
-        "event_id": "3dba40cdf22e962c0f6f6c940ef01850", "home": "Genoa", "away": "Frosinone", "result": "D",
-        "market": [0.445403244400048, 0.282980928929109, 0.271615826670843],
-        "old_model": [0.3334816594874364, 0.2821909105124798, 0.3843274300000837],
-    },
-    {
-        "event_id": "b412817739a87e18bf391bf6ccff6560", "home": "Lazio", "away": "AC Milan", "result": "D",
-        "market": [0.281318981610276, 0.299624870383391, 0.419056148006334],
-        "old_model": [0.2839135910246846, 0.2934240786261582, 0.4226623303491572],
-    },
-    {
-        "event_id": "fd30ca2b96bfa088e51bffddeb3b6e56", "home": "Atalanta BC", "away": "Cagliari", "result": "A",
-        "market": [0.599241512092612, 0.237932289673021, 0.162826198234367],
-        "old_model": [0.5754179358482361, 0.2043052911758422, 0.2202767729759216],
-    },
-    {
-        "event_id": "e66df35062d3cc1c59258406374c2e76", "home": "Lecce", "away": "Monza", "result": "H",
-        "market": [0.358238198691022, 0.307047489045547, 0.334714312263432],
-        "old_model": [0.3413350385825347, 0.3025469274087825, 0.3561180340086828],
-    },
-    {
-        "event_id": "27eaaab4498bb2984321e5f81f0ff9fd", "home": "Napoli", "away": "Bologna", "result": "H",
-        "market": [0.529471343018315, 0.267441816899981, 0.203086840081704],
-        "old_model": [0.5386763375603061, 0.2388650548119859, 0.2224586076277079],
-    },
-    {
-        "event_id": "0a91f850039ce571eb6e90b2eed15548", "home": "Sassuolo", "away": "Juventus", "result": "H",
-        "market": [0.182743963070909, 0.242218002399942, 0.575038034529149],
-        "old_model": [0.2073271932401416, 0.2628998536735729, 0.5297729530862854],
-    },
-    {
-        "event_id": "17a081148b714450797ef8d6a29d16e6", "home": "Torino", "away": "AS Roma", "result": "A",
-        "market": [0.162349921031296, 0.235421660599638, 0.602228418369067],
-        "old_model": [0.1335925499675437, 0.2143672470559849, 0.6520402029764713],
-    },
-    {
-        "event_id": "9da3aa4b46166eb4ccd1e600d67080a6", "home": "Como", "away": "Parma", "result": "H",
-        "market": [0.774299209903783, 0.155769910752818, 0.0699308793433981],
-        "old_model": [0.6703084111213684, 0.2181374281644821, 0.1115541607141494],
-    },
-    {
-        "event_id": "7ea3ea9925ae0f1d149965fb9769c7dc", "home": "Inter Milan", "away": "Udinese", "result": "H",
-        "market": [0.758308448454786, 0.157106223942894, 0.08458532760232],
-        "old_model": [0.7089131474494934, 0.1738733053207397, 0.1172135472297668],
-    },
-)
+
+def _deny_retired_saved_cohort_replay() -> None:
+    """Fail closed: the retrospective replay/refit path is permanently retired."""
+    raise PermissionError(
+        "saved-cohort replay/refit is retired; use the SHA-pinned frozen candidate "
+        "and the separately gated pre-kickoff V2 forward path"
+    )
+
+
+def _require_training_data_access() -> None:
+    _deny_retired_saved_cohort_replay()
+
+
+def _require_post_outcome_replay_gate() -> None:
+    _deny_retired_saved_cohort_replay()
+
+
+
+def _load_saved_targets_after_gate() -> tuple[dict[str, Any], ...]:
+    """The protected target cohort is not embedded in the source tree."""
+    _require_post_outcome_replay_gate()
+    raise AssertionError("unreachable: post-outcome replay gate must raise")
 
 
 def git_blob_sha1(path: Path) -> str:
@@ -127,6 +99,7 @@ def sha256_bytes(payload: bytes) -> str:
 
 
 def load_module(name: str, path: Path):
+    _deny_retired_saved_cohort_replay()
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load frozen module {name} from {path}")
@@ -137,6 +110,7 @@ def load_module(name: str, path: Path):
 
 
 def load_frozen_modules(source_dir: Path):
+    _deny_retired_saved_cohort_replay()
     for filename, expected_blob in EXPECTED_FROZEN_GIT_BLOBS.items():
         path = source_dir / filename
         if not path.is_file():
@@ -165,6 +139,7 @@ def load_frozen_modules(source_dir: Path):
 
 
 def download_csv(code: str) -> tuple[pd.DataFrame, str]:
+    _deny_retired_saved_cohort_replay()
     url = BASE_URL.format(code=code)
     response = requests.get(url, timeout=60, headers={"User-Agent": "football-ai-frozen-replay/1"})
     response.raise_for_status()
@@ -174,6 +149,7 @@ def download_csv(code: str) -> tuple[pd.DataFrame, str]:
 
 
 def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, pd.DataFrame]]:
+    _deny_retired_saved_cohort_replay()
     raw_frames: list[pd.DataFrame] = []
     hashes: dict[str, str] = {}
     by_code: dict[str, pd.DataFrame] = {}
@@ -204,6 +180,10 @@ def build_training_frame(lab) -> tuple[pd.DataFrame, dict[str, str], dict[str, p
 
 
 def build_target_features(lab, historical_by_code: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, str, dict[str, int]]:
+    _deny_retired_saved_cohort_replay()
+    targets = _load_saved_targets_after_gate()
+    require_v2_source_capture_access()
+    require_v2_inference_access()
     current, current_sha256 = download_csv(CURRENT_SEASON_CODE)
     frames = [historical_by_code[code].copy() for code in TRAIN_SEASONS]
     frames.append(current.copy())
@@ -233,7 +213,7 @@ def build_target_features(lab, historical_by_code: dict[str, pd.DataFrame]) -> t
 
     records: list[dict[str, Any]] = []
     prior_counts: dict[str, int] = {}
-    for target in TARGETS:
+    for target in targets:
         home_source = SOURCE_NAME.get(target["home"], target["home"])
         away_source = SOURCE_NAME.get(target["away"], target["away"])
         if home_source not in histories or away_source not in histories:
@@ -249,13 +229,15 @@ def build_target_features(lab, historical_by_code: dict[str, pd.DataFrame]) -> t
     return feature_frame[frozen_features], current_sha256, prior_counts
 
 
-def validate_targets() -> None:
-    if len(TARGETS) != 10:
+def validate_targets() -> tuple[dict[str, Any], ...]:
+    _deny_retired_saved_cohort_replay()
+    targets = _load_saved_targets_after_gate()
+    if len(targets) != 10:
         raise RuntimeError("frozen Serie A parent cohort must contain exactly 10 events")
-    ids = [row["event_id"] for row in TARGETS]
+    ids = [row["event_id"] for row in targets]
     if len(ids) != len(set(ids)):
         raise RuntimeError("duplicate event_id in frozen replay cohort")
-    for row in TARGETS:
+    for row in targets:
         for field in ("market", "old_model"):
             p = np.asarray(row[field], dtype=float)
             if p.shape != (3,) or not np.isfinite(p).all() or (p <= 0).any():
@@ -265,17 +247,20 @@ def validate_targets() -> None:
         if row["result"] not in RESULT_TO_INT:
             raise RuntimeError(f"invalid outcome for {row['event_id']}")
 
+    return targets
+
 
 def replay(source_dir: Path, *, save_research_candidate: bool = False) -> dict[str, Any]:
-    validate_targets()
+    _deny_retired_saved_cohort_replay()
+    targets = validate_targets()
     lab, v1, v2 = load_frozen_modules(source_dir)
     training, historical_hashes, historical_by_code = build_training_frame(lab)
     artifact = v2.fit_candidate_artifact(training)
     target_features, current_sha256, prior_counts = build_target_features(lab, historical_by_code)
 
-    market = np.asarray([row["market"] for row in TARGETS], dtype=float)
-    old_model = np.asarray([row["old_model"] for row in TARGETS], dtype=float)
-    y = np.asarray([RESULT_TO_INT[row["result"]] for row in TARGETS], dtype=int)
+    market = np.asarray([row["market"] for row in targets], dtype=float)
+    old_model = np.asarray([row["old_model"] for row in targets], dtype=float)
+    y = np.asarray([RESULT_TO_INT[row["result"]] for row in targets], dtype=int)
     shadow = v2.predict_shadow_residual(market, target_features, artifact)
     active = v2.predict_candidate(market, target_features, artifact)
     if not np.allclose(active, market, atol=1e-15, rtol=0):
@@ -285,7 +270,7 @@ def replay(source_dir: Path, *, save_research_candidate: bool = False) -> dict[s
     old_score = v1.score_probabilities(y, old_model)
     shadow_score = v1.score_probabilities(y, shadow)
     predictions = []
-    for idx, target in enumerate(TARGETS):
+    for idx, target in enumerate(targets):
         predictions.append({
             "event_id": target["event_id"],
             "home_team": target["home"],
@@ -308,7 +293,7 @@ def replay(source_dir: Path, *, save_research_candidate: bool = False) -> dict[s
         "parent_replay_total_events": FROZEN_PARENT_REPLAY_EVENTS,
         "contract_scope": "SERIE_A_ONLY",
         "contract_scope_reason": "The frozen V2 residual primary cohort is Serie A; applying it to the other saved leagues would be off-contract.",
-        "cohort_n": len(TARGETS),
+        "cohort_n": len(targets),
         "history_cutoff_date": HISTORY_CUTOFF_DATE.strftime("%Y-%m-%d"),
         "outcomes_were_known_before_this_replay": True,
         "interpretation_limit": "Post-outcome diagnostic only; not untouched OOT or prospective evidence.",
@@ -357,6 +342,7 @@ def assert_same_frozen_replay(report: dict[str, Any]) -> None:
     Old observations are already open: this is a *post-outcome diagnostic* replay.
     No changed training source, quote, candidate or reported result is accepted.
     """
+    _deny_retired_saved_cohort_replay()
     expected_path = Path(__file__).resolve().parent / (
         "experiments/market_anchor_v2_saved_cohort_replay_report.json"
     )
@@ -417,13 +403,8 @@ def assert_same_frozen_replay(report: dict[str, Any]) -> None:
 
 
 def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
-    """Recover the old Serie A JSON weights WITHOUT reading current-season results.
-
-    The 2026/27 Football-Data CSV is intentionally NOT fetched: it grows over
-    time and its full-file SHA naturally differs from September. All ten
-    TRAIN_SEASONS source file hashes, the model artifact SHA, and the fixed
-    training fingerprint MUST still match their immutable September reference.
-    """
+    """Historical refit/recovery is retired; the original candidate is already SHA-pinned."""
+    _deny_retired_saved_cohort_replay()
     _lab, _v1, v2 = load_frozen_modules(source_dir)
     from_file = Path(__file__).resolve().parent / (
         "experiments/market_anchor_v2_saved_cohort_replay_report.json"
@@ -513,6 +494,7 @@ def restore_frozen_candidate_from_training_history(source_dir: Path) -> Path:
 
 
 def main() -> None:
+    _deny_retired_saved_cohort_replay()
     parser = argparse.ArgumentParser()
     parser.add_argument("--frozen-source-dir", type=Path, required=True)
     parser.add_argument("--restore-candidate-only", action="store_true",
@@ -526,6 +508,7 @@ def main() -> None:
             parser.error("--restore-candidate-only requires --save-research-candidate")
         restore_frozen_candidate_from_training_history(args.frozen_source_dir)
         return
+    _require_post_outcome_replay_gate()
     report = replay(args.frozen_source_dir, save_research_candidate=args.save_research_candidate)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

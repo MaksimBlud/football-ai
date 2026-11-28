@@ -38,6 +38,108 @@ ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
 
+def build_source_provenance(
+    archive: dict,
+    parent: dict,
+    proof: dict,
+    *,
+    quote_time: datetime,
+) -> dict:
+    """Export only source facts independently checked from GitHub and ZIP bytes.
+
+    This envelope is evidence attached to the original-V2 forward diagnostic.
+    It is not, by itself, a completed-event gate row or permission to read outcomes.
+    """
+    if not isinstance(archive, dict) or not isinstance(parent, dict) or not isinstance(proof, dict):
+        raise ValueError("source provenance inputs must be mappings")
+    if (
+        type(archive.get("artifact_id")) is not int or archive["artifact_id"] <= 0
+        or type(archive.get("run_id")) is not int or archive["run_id"] <= 0
+    ):
+        raise ValueError("source provenance artifact and parent ids must be positive integers")
+    artifact_sha = archive.get("sha256")
+    artifact_head = archive.get("head_sha")
+    if not isinstance(artifact_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", artifact_sha):
+        raise ValueError("source provenance artifact SHA256 is invalid")
+    if not isinstance(artifact_head, str) or not re.fullmatch(r"[0-9a-f]{40}", artifact_head):
+        raise ValueError("source provenance artifact head SHA is invalid")
+    artifact_created_raw = archive.get("created_at")
+    # Use timezone-aware duck typing here: CLI tests replace this module's
+    # datetime clock with a frozen subclass, while parsed quote timestamps are
+    # still ordinary datetime instances.
+    if (
+        getattr(artifact_created_raw, "tzinfo", None) is None
+        or artifact_created_raw.utcoffset() is None
+    ):
+        raise ValueError("source provenance artifact creation time must be timezone-aware")
+    if (
+        getattr(quote_time, "tzinfo", None) is None
+        or quote_time.utcoffset() is None
+    ):
+        raise ValueError("source provenance quote time must be timezone-aware")
+
+    expected_parent_keys = {
+        "run_id", "run_head_sha", "workflow_path", "head_branch", "event",
+        "status", "conclusion", "run_created_at_utc", "run_completed_at_utc",
+    }
+    if set(parent) != expected_parent_keys:
+        raise ValueError("source parent run provenance is incomplete or has unexpected fields")
+    if (
+        type(parent["run_id"]) is not int
+        or parent["run_id"] != archive["run_id"]
+        or parent["run_head_sha"] != artifact_head
+        or parent["workflow_path"] != SOURCE_WORKFLOW_PATH
+        or parent["head_branch"] != "main"
+        or parent["event"] not in ("push", "schedule", "workflow_dispatch")
+        or parent["status"] != "completed"
+        or parent["conclusion"] != "success"
+    ):
+        raise ValueError("source parent run does not match the authenticated original V2 collector")
+
+    if (
+        proof.get("archive_sha256_verified") is not True
+        or proof.get("github_digest_matched") is not True
+        or proof.get("archive_sha256") != artifact_sha
+        or proof.get("source_member_sha256_verified") is not True
+        or proof.get("manifest_candidate_sha_verified") is not True
+        or proof.get("original_candidate_sha256") != FROZEN_SHA
+    ):
+        raise ValueError("source archive, member hashes, or frozen candidate manifest are not verified")
+
+    artifact_created = artifact_created_raw.astimezone(timezone.utc)
+    source_observed = parse_utc(proof["latest_source_observed_at_utc"])
+    run_created = parse_utc(parent["run_created_at_utc"])
+    run_completed = parse_utc(parent["run_completed_at_utc"])
+    quote = quote_time.astimezone(timezone.utc)
+    if not (
+        source_observed <= artifact_created
+        and run_created <= artifact_created <= run_completed < quote
+    ):
+        raise ValueError("source observation, archive, parent completion, and quote chronology is invalid")
+
+    return {
+        "artifact_id": archive["artifact_id"],
+        "artifact_sha256": artifact_sha,
+        "artifact_head_sha": artifact_head,
+        "artifact_created_at_utc": artifact_created.isoformat(),
+        "latest_source_observed_at_utc": source_observed.isoformat(),
+        "archive_sha256_verified": True,
+        "source_member_sha256_verified": True,
+        "manifest_candidate_sha_verified": True,
+        "parent_run": {
+            "run_id": parent["run_id"],
+            "run_head_sha": parent["run_head_sha"],
+            "workflow_path": parent["workflow_path"],
+            "head_branch": parent["head_branch"],
+            "event": parent["event"],
+            "status": parent["status"],
+            "conclusion": parent["conclusion"],
+            "run_created_at_utc": run_created.isoformat(),
+            "run_completed_at_utc": run_completed.isoformat(),
+        },
+    }
+
+
 def _validated_artifact_download_location(location: Any) -> str:
     """Accept only GitHub Actions' HTTPS Azure artifact-download redirect.
 
@@ -162,6 +264,11 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
         "run_id": run_id,
         "run_head_sha": archive["head_sha"],
         "workflow_path": SOURCE_WORKFLOW_PATH,
+        "head_branch": j["head_branch"],
+        "event": j["event"],
+        "status": j["status"],
+        "conclusion": j["conclusion"],
+        "run_created_at_utc": created.isoformat(),
         "run_completed_at_utc": completed.isoformat(),
     }
 
@@ -310,6 +417,9 @@ def prepare_forward_capture(
             )
         if gate["source_archive_prequote_ready"] != 1:
             raise ValueError("source archive unexpectedly failed pre-quote gate")
+        record["source_provenance"] = build_source_provenance(
+            chosen, verified_runs[artifact_id], gate, quote_time=quote_time
+        )
         with zipfile.ZipFile(BytesIO(raw), "r") as z:
             archived_report = json.loads(z.read(ARCHIVE_REPORT))
             audits = archived_report["public_source_files"]
@@ -446,6 +556,9 @@ def capture_forward_with_source_preflight(
     ):
         raise ValueError("original V2 source archive preflight is incomplete")
 
+    preflight_source_provenance = build_source_provenance(
+        chosen, parent, proof, quote_time=now
+    )
     verified_archive = {
         **chosen,
         "verified_parent_completed_at_utc": parent_completed.isoformat(),
@@ -485,6 +598,7 @@ def capture_forward_with_source_preflight(
         "verified_historical_csv_count": proof["archived_csv_count"],
         "verified_historical_match_rows": proof["historical_match_rows"],
         "original_candidate_sha256": proof["original_candidate_sha256"],
+        "source_provenance": preflight_source_provenance,
         "quotes_read_after_source_preflight": True,
     }
     report["quote_read_skipped"] = False
