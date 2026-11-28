@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 import zipfile
 
 import pandas as pd
@@ -129,26 +130,81 @@ def verify_source_run(
     }
 
 
+def _validated_artifact_download_location(location: Any) -> str:
+    """Accept only the HTTPS Azure artifact-download URL returned by GitHub.
+
+    The signed Location is a short-lived bearer URL. Fetch it separately
+    without forwarding GitHub credentials or API headers; unknown origins
+    and additional redirects fail closed.
+    """
+    if not isinstance(location, str) or not location or len(location) > 4096:
+        raise ValueError("GitHub artifact redirect Location is missing or invalid")
+    try:
+        parsed = urlsplit(location)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("GitHub artifact redirect Location is malformed") from exc
+    host = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or port not in (None, 443)
+        or parsed.netloc.lower() not in {host, f"{host}:443"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.fragment
+        or not re.fullmatch(r"productionresultssa[0-9]+[.]blob[.]core[.]windows[.]net", host)
+        or not parsed.path.startswith("/actions-results/")
+        or not parsed.query
+        or any(part in {".", ".."} for part in parsed.path.split("/"))
+    ):
+        raise ValueError("GitHub artifact redirect origin or URL shape is not allowed")
+    return location
+
+
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
-    # Enforce privacy at the byte-download boundary, not only in the CLI.
-    require_private_repository(token=token, get=get)
+    # Validate local arguments before the owner-controlled network guard.
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("GitHub Actions actions:read token missing")
+
+    # Enforce privacy at the byte-download boundary, not only in the CLI.
+    require_private_repository(token=token, get=get)
+    api_url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
     response = get(
-        f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip",
+        api_url,
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         },
         timeout=90,
+        allow_redirects=False,
     )
     response.raise_for_status()
-    raw = response.content
+    if (
+        getattr(response, "status_code", None) != 302
+        or getattr(response, "url", api_url) != api_url
+        or getattr(response, "history", ())
+    ):
+        raise ValueError("GitHub artifact API must return one un-followed HTTP 302")
+
+    location = _validated_artifact_download_location(
+        getattr(response, "headers", {}).get("Location")
+    )
+    download = get(location, timeout=90, allow_redirects=False)
+    download.raise_for_status()
+    if (
+        getattr(download, "status_code", None) != 200
+        or getattr(download, "url", location) != location
+        or getattr(download, "history", ())
+    ):
+        raise ValueError("GitHub artifact storage must return one un-followed HTTP 200")
+
+    raw = download.content
     if not raw or len(raw) > MAX_ARCHIVE_BYTES:
         raise ValueError("current-form source archive is empty or too large")
     return raw
-
 
 def verify_and_load_archive(
     raw: bytes, archive: Mapping[str, Any], parent: Mapping[str, Any]
@@ -353,6 +409,15 @@ def _latest_quotes(quotes: list[dict], *, now: datetime) -> list[dict]:
             raise ValueError("quote identity is incomplete")
         kickoff = parse_utc(q["commence_time_utc"])
         snapshot = parse_utc(q["snapshot_time_utc"])
+        if "created_at" not in q:
+            raise ValueError("saved quote row is missing created_at")
+        created_at = parse_utc(q["created_at"])
+        if created_at > now:
+            raise ValueError("saved quote row persisted after capture clock")
+        if snapshot <= now and created_at < snapshot:
+            raise ValueError("saved quote row persisted before declared snapshot time")
+        if not created_at < kickoff:
+            raise ValueError("saved quote row persisted at or after kickoff")
         if snapshot > now or not snapshot < kickoff:
             raise ValueError("invalid current-form quote timing")
         identity = (event, home, away, kickoff)
@@ -402,6 +467,7 @@ def prepare_forward_capture(
             "home_team": quote["home_team"],
             "away_team": quote["away_team"],
             "quote_time_utc": quote_time.isoformat(),
+            "quote_row_created_at_utc": parse_utc(quote["created_at"]).isoformat(),
             "kickoff_utc": kickoff.isoformat(),
         }
         if not now < kickoff:
