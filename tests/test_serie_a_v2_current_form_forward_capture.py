@@ -33,13 +33,18 @@ HEAD = "a" * 40
 def quote(
     snapshot="2026-10-19T05:30:00Z",
     kickoff="2026-10-19T18:00:00Z",
+    created_at=None,
 ):
+    if created_at is None:
+        snapshot_dt = datetime.fromisoformat(snapshot.replace("Z", "+00:00"))
+        created_at = (snapshot_dt + timedelta(seconds=1)).isoformat()
     return {
         "event_id": "v2-current-form-test-event",
         "league": "SERIE_A",
         "home_team": "Juventus",
         "away_team": "Napoli",
         "snapshot_time_utc": snapshot,
+        "created_at": created_at,
         "commence_time_utc": kickoff,
         "home_odds": 2.2,
         "draw_odds": 3.4,
@@ -191,6 +196,7 @@ def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays
     assert report["v2_current_form_shadow_captured"] == 1
     row = report["rows"][0]
     assert row["status"] == "CURRENT_FORM_V2_SHADOW_CAPTURED_PREKICKOFF"
+    assert row["quote_row_created_at_utc"] == "2026-10-19T05:30:01+00:00"
     preview = row["v2_preview"]
     assert preview["model_candidate_sha256"] == FROZEN_SHA
     assert preview["eligible_for_current_form_forward_shadow"] is True
@@ -366,12 +372,8 @@ def test_current_form_source_zip_download_rejects_public_repo_before_artifact_by
     assert calls == [GITHUB_API]
 
 
-def test_current_form_source_zip_download_checks_private_repo_before_fetching_bytes(monkeypatch):
+def _private_repository_get(fake_artifact_get, calls):
     from serie_a_v2_live_access_guard import GITHUB_API
-
-    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
-    calls = []
-    artifact_url = f"{GITHUB_API}/actions/artifacts/9876/zip"
 
     class RepoResponse:
         url = GITHUB_API
@@ -380,22 +382,262 @@ def test_current_form_source_zip_download_checks_private_repo_before_fetching_by
         def json(self):
             return {"full_name": "MaksimBlud/football-ai", "private": True}
 
-    class ArchiveResponse:
-        content = b"synthetic-private-zip"
-
-        def raise_for_status(self):
-            return None
-
-    def fake_get(url, **kwargs):
-        calls.append(url)
+    def wrapped(url, **kwargs):
+        calls.append((url, kwargs))
         if url == GITHUB_API:
-            assert kwargs["allow_redirects"] is False
+            assert kwargs.get("allow_redirects") is False
             return RepoResponse()
-        assert url == artifact_url
-        return ArchiveResponse()
+        return fake_artifact_get(url, **kwargs)
 
-    assert get_archive(9876, token="synthetic-token", get=fake_get) == b"synthetic-private-zip"
-    assert calls == [GITHUB_API, artifact_url]
+    return wrapped
+
+
+class _FakeArtifactDownloadResponse:
+    def __init__(self, status_code, url, *, headers=None, content=b"", history=()):
+        self.status_code = status_code
+        self.url = url
+        self.headers = headers or {}
+        self.content = content
+        self.history = list(history)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
+def test_current_form_source_zip_download_checks_private_repo_and_safe_redirect(monkeypatch):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = f"{GITHUB_API}/actions/artifacts/9876/zip"
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+    archive_bytes = bytes.fromhex("504b0304") + b"synthetic-private-zip"
+    calls = []
+
+    def fake_artifact_get(url, **kwargs):
+        if url == api_url:
+            assert kwargs["allow_redirects"] is False
+            assert kwargs["headers"]["Authorization"] == "Bearer synthetic-token"
+            return _FakeArtifactDownloadResponse(
+                302, api_url, headers={"Location": signed_url}
+            )
+        assert url == signed_url
+        assert kwargs["allow_redirects"] is False
+        assert "headers" not in kwargs
+        return _FakeArtifactDownloadResponse(200, signed_url, content=archive_bytes)
+
+    assert get_archive(
+        9876, token="synthetic-token",
+        get=_private_repository_get(fake_artifact_get, calls),
+    ) == archive_bytes
+    assert [url for url, _ in calls] == [GITHUB_API, api_url, signed_url]
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "http://productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://evil.example/actions-results/a.zip?sig=x",
+        "https://productionresults.evil.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/other/a.zip?sig=x",
+        "https://user@productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net:444/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/a.zip",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/../a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net:/actions-results/a.zip?sig=x",
+        "https://productionresultssa0.blob.core.windows.net/actions-results/a.zip?sig=x#fragment",
+    ],
+)
+def test_current_form_get_archive_rejects_untrusted_redirect_before_second_request(
+    monkeypatch, location
+):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = f"{GITHUB_API}/actions/artifacts/123/zip"
+    calls = []
+
+    def fake_artifact_get(url, **kwargs):
+        assert url == api_url
+        return _FakeArtifactDownloadResponse(
+            302, api_url, headers={"Location": location}
+        )
+
+    with pytest.raises(ValueError, match="redirect"):
+        get_archive(
+            123, token="synthetic-token",
+            get=_private_repository_get(fake_artifact_get, calls),
+        )
+    assert [url for url, _ in calls] == [GITHUB_API, api_url]
+
+
+def test_current_form_get_archive_rejects_missing_location_and_non_redirect_response(monkeypatch):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = f"{GITHUB_API}/actions/artifacts/123/zip"
+    calls = []
+
+    def missing_location(url, **kwargs):
+        return _FakeArtifactDownloadResponse(302, api_url)
+
+    with pytest.raises(ValueError, match="Location"):
+        get_archive(
+            123, token="synthetic-token",
+            get=_private_repository_get(missing_location, calls),
+        )
+    assert [url for url, _ in calls] == [GITHUB_API, api_url]
+
+    calls.clear()
+
+    def api_200(url, **kwargs):
+        return _FakeArtifactDownloadResponse(200, api_url, content=b"not-a-redirect")
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        get_archive(
+            123, token="synthetic-token",
+            get=_private_repository_get(api_200, calls),
+        )
+    assert [url for url, _ in calls] == [GITHUB_API, api_url]
+
+
+def test_current_form_get_archive_rejects_second_redirect_without_forwarding_token(monkeypatch):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = f"{GITHUB_API}/actions/artifacts/123/zip"
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+    calls = []
+
+    def fake_artifact_get(url, **kwargs):
+        if url == api_url:
+            return _FakeArtifactDownloadResponse(
+                302, api_url, headers={"Location": signed_url}
+            )
+        return _FakeArtifactDownloadResponse(
+            302, signed_url, headers={"Location": "https://evil.example/next"}
+        )
+
+    with pytest.raises(ValueError, match="HTTP 200"):
+        get_archive(
+            123, token="synthetic-token",
+            get=_private_repository_get(fake_artifact_get, calls),
+        )
+    assert [url for url, _ in calls] == [GITHUB_API, api_url, signed_url]
+    assert "headers" not in calls[-1][1]
+    assert calls[-1][1]["allow_redirects"] is False
+
+
+def test_current_form_get_archive_rejects_unexpected_final_url_and_history(monkeypatch):
+    from serie_a_v2_live_access_guard import GITHUB_API
+
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    api_url = f"{GITHUB_API}/actions/artifacts/123/zip"
+    signed_url = (
+        "https://productionresultssa0.blob.core.windows.net/"
+        "actions-results/container/archive.zip?sig=synthetic"
+    )
+    calls = []
+
+    def wrong_final_url(url, **kwargs):
+        if url == api_url:
+            return _FakeArtifactDownloadResponse(
+                302, api_url, headers={"Location": signed_url}
+            )
+        return _FakeArtifactDownloadResponse(200, "https://evil.example/other", content=b"zip")
+
+    with pytest.raises(ValueError, match="HTTP 200"):
+        get_archive(
+            123, token="synthetic-token",
+            get=_private_repository_get(wrong_final_url, calls),
+        )
+
+    def hidden_redirect_history(url, **kwargs):
+        return _FakeArtifactDownloadResponse(
+            302, api_url, headers={"Location": signed_url}, history=[object()]
+        )
+
+    with pytest.raises(ValueError, match="HTTP 302"):
+        get_archive(
+            123, token="synthetic-token",
+            get=_private_repository_get(hidden_redirect_history, calls),
+        )
+
+
+@pytest.mark.parametrize("artifact_id", [True, 0, -1, "123"])
+def test_current_form_get_archive_rejects_invalid_artifact_identity_before_network(
+    monkeypatch, artifact_id
+):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+    with pytest.raises(ValueError, match="artifact id"):
+        get_archive(
+            artifact_id, token="synthetic-token",
+            get=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+    assert calls == []
+
+
+def test_current_form_get_archive_rejects_missing_token_before_network(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+    with pytest.raises(ValueError, match="token missing"):
+        get_archive(
+            123, token=" ",
+            get=lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    ("created_at", "remove_created_at", "as_of_utc", "message"),
+    [
+        (
+            None, True, datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            "saved quote row is missing created_at",
+        ),
+        (
+            "2026-10-19T05:29:59Z", False,
+            datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            "saved quote row persisted before declared snapshot time",
+        ),
+        (
+            "2026-10-19T05:40:01Z", False,
+            datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            "saved quote row persisted after capture clock",
+        ),
+        (
+            "2026-10-19T18:00:00Z", False,
+            datetime(2026, 10, 19, 19, 0, tzinfo=timezone.utc),
+            "saved quote row persisted at or after kickoff",
+        ),
+    ],
+)
+def test_current_form_quote_persistence_is_preflighted_before_source_callbacks(
+    created_at, remove_created_at, as_of_utc, message
+):
+    raw, archives = make_archive()
+    candidate = quote(created_at=None if remove_created_at else created_at)
+    if remove_created_at:
+        candidate.pop("created_at")
+    callbacks = []
+
+    with pytest.raises(ValueError, match=message):
+        prepare_forward_capture(
+            [candidate],
+            archives,
+            as_of_utc=as_of_utc,
+            load_archive=lambda _artifact_id: callbacks.append("archive") or raw,
+            verify_parent_run=lambda *_args, **_kwargs: callbacks.append("parent") or {},
+        )
+
+    assert callbacks == [], "invalid quote persistence must fail before source or parent I/O"
 
 def test_unverified_parent_cannot_admit_quote():
     raw, archives = make_archive()
