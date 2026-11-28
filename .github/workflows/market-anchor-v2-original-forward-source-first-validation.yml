@@ -9,6 +9,8 @@ on:
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "tests/test_serie_a_v2_forward_runtime_lock.py"
       - "research/locks/market-anchor-v2-forward-py311.lock"
       - "research/locks/market-anchor-v2-forward-py312.lock"
@@ -22,6 +24,8 @@ on:
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
+      - "serie_a_v2_current_form_forward_capture.py"
+      - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "tests/test_serie_a_v2_forward_runtime_lock.py"
       - "research/locks/market-anchor-v2-forward-py311.lock"
       - "research/locks/market-anchor-v2-forward-py312.lock"
@@ -72,6 +76,7 @@ jobs:
         run: |
           python -m py_compile \
             serie_a_v2_forward_capture.py \
+            serie_a_v2_current_form_forward_capture.py \
             serie_a_v2_attest_real_source.py \
             serie_a_v2_prequote_source_archive_gate.py \
             serie_a_v2_live_diagnostic_report.py \
@@ -81,6 +86,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/test_serie_a_v2_forward_capture.py \
+            tests/test_serie_a_v2_current_form_forward_capture.py \
             tests/test_serie_a_v2_attest_real_source.py \
             tests/test_serie_a_v2_manual_quote_trigger_contract.py \
             tests/test_serie_a_v2_prequote_source_archive_gate.py \

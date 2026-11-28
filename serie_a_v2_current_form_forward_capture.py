@@ -33,6 +33,7 @@ from serie_a_v2_frozen_shadow_preview import (
 )
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 from serie_a_v2_prequote_source_archive_gate import MAX_ZIP_BYTES
+from serie_a_v2_live_access_guard import require_private_repository
 
 REPOSITORY = "MaksimBlud/football-ai"
 GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
@@ -63,6 +64,8 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
 
 
 def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    # Direct callers must not inspect source-artifact metadata while storage is public.
+    require_private_repository(token=token, get=get)
     out, seen_ids = [], set()
     for page in range(1, 4):
         data = _github_json(
@@ -127,6 +130,8 @@ def verify_source_run(
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    # Enforce privacy at the byte-download boundary, not only in the CLI.
+    require_private_repository(token=token, get=get)
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid source artifact id")
     response = get(
