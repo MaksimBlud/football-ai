@@ -353,8 +353,8 @@ def verify_latest_source_archive(
 ) -> dict:
     """Verify the latest successful main source artifact even when all quotes are stale."""
     _require_current_form_forward_rights()
-    if as_of_utc.tzinfo is None:
-        raise ValueError("source verification clock must be timezone-aware")
+    if as_of_utc.tzinfo is None or as_of_utc.utcoffset() is None:
+        raise ValueError("source verification clock must have a real UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
     candidates = sorted(
         (item for item in archive_metadata if item["created_at"] < now),
@@ -454,8 +454,8 @@ def prepare_forward_capture(
     write_sources_to: Path | None = None,
 ) -> dict:
     _require_current_form_forward_rights()
-    if as_of_utc.tzinfo is None:
-        raise ValueError("current-form forward clock must be timezone-aware")
+    if as_of_utc.tzinfo is None or as_of_utc.utcoffset() is None:
+        raise ValueError("current-form forward clock must have a real UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
     if write_sources_to is not None:
         write_sources_to.mkdir(parents=True, exist_ok=True)
