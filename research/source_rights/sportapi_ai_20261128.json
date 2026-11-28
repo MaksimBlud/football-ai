@@ -1,0 +1,130 @@
+{
+  "schema_version": "MARKET_ANCHOR_V2_SOURCE_RIGHTS_AUDIT_V1",
+  "provider": "SportAPI.ai",
+  "source_id": "sportapi_ai",
+  "reviewed_at_utc": "2026-11-28",
+  "scope": "official public documentation only; no account, key, API call, or data download",
+  "official_sources": {
+    "football_api": "https://sportapi.ai/football-api",
+    "documentation": "https://sportapi.ai/docs",
+    "terms": "https://sportapi.ai/terms",
+    "coverage": "https://sportapi.ai/coverage"
+  },
+  "free_plan": {
+    "price_usd_per_month": 0,
+    "requests_per_day": 1000,
+    "requests_per_month": 7000,
+    "all_endpoints_claimed": true,
+    "all_leagues_claimed": true,
+    "serie_a_listed": true,
+    "historical_match_data_claimed": true,
+    "exact_serie_a_2026_27_match_stats_coverage_verified": false,
+    "exact_historical_season_depth_verified": false,
+    "per_fixture_stats_completeness_verified": false,
+    "free_plan_requires_api_key": true,
+    "odds_available": false
+  },
+  "documented_data": {
+    "fixture_scores_and_results": true,
+    "goals_and_goal_minutes": true,
+    "yellow_cards": true,
+    "red_cards": true,
+    "team_match_stats_endpoint": true,
+    "team_match_stats_fields": [
+      "shots",
+      "shots_on_target",
+      "fouls",
+      "passes",
+      "pass_accuracy",
+      "tackles",
+      "saves",
+      "yellow_cards"
+    ],
+    "corners_field_documented": false,
+    "possession_available": false,
+    "expected_goals_available": false,
+    "betting_odds_available": false,
+    "detailed_coverage_varies_by_competition": true,
+    "exact_serie_a_field_coverage_authenticated": false
+  },
+  "original_v2": {
+    "experiment_id": "MARKET_ANCHOR_1X2_V2",
+    "candidate_sha256": "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6",
+    "training_fingerprint_sha256": "f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098",
+    "training_rows": 3799,
+    "feature_count": 19,
+    "weight_matrix_shape": [
+      20,
+      2
+    ],
+    "active_lambda": 0,
+    "shadow_residual_lambda": 1,
+    "stability_gate_passed": false,
+    "outcome_read_gate_required_completed_primary_events": 30,
+    "eligible_completed_primary_forecasts_observed": 0,
+    "outcome_read_gate_open": false
+  },
+  "feature_coverage": {
+    "exact_original_19_feature_parity_verified": false,
+    "required_corner_features": [
+      "diff_corners_for_5",
+      "diff_corners_for_10",
+      "diff_corners_against_5",
+      "diff_corners_against_10",
+      "diff_corners_for_venue5",
+      "diff_corners_against_venue5"
+    ],
+    "required_corner_feature_count": 6,
+    "documented_corner_source_fields": [],
+    "missing_required_feature_count": 6,
+    "feature_substitution_authorized": false,
+    "alternate_imputation_authorized": false
+  },
+  "rights": {
+    "terms_last_updated": "2026-11-27",
+    "own_websites_apps_analysis_and_products_permitted_by_terms": true,
+    "raw_data_feed_redistribution_permitted": false,
+    "raw_data_feed_redistribution_prohibited": true,
+    "explicit_internal_ml_training_permission": false,
+    "explicit_internal_model_inference_permission": false,
+    "explicit_private_raw_response_retention_permission": false,
+    "retention_after_account_termination_explicitly_defined": false,
+    "upstream_provider_identity_and_field_level_rights_verified": false,
+    "league_or_federation_data_rights_independently_verified": false,
+    "written_provider_clearance_obtained": false
+  },
+  "provenance": {
+    "fixture_updated_at_example_present": true,
+    "source_first_observed_timestamp_documented": false,
+    "per_field_correction_timestamp_documented": false,
+    "immutable_source_revision_or_history_documented": false,
+    "local_receipt_utc_and_sha256_capture_possible_if_later_authorized": true,
+    "parent_workflow_completion_attestation_possible": true,
+    "source_before_quote_evidence_exists": false
+  },
+  "decision": "HOLD_INCOMPLETE_FEATURE_COVERAGE_AND_UPSTREAM_RIGHTS",
+  "integration_authorized": false,
+  "non_actions": {
+    "account_created": false,
+    "api_key_created": false,
+    "api_requests": 0,
+    "source_downloads": 0,
+    "paid_provider_calls": 0,
+    "odds_requests": 0,
+    "supabase_accessed": false,
+    "supabase_reads": 0,
+    "supabase_writes": 0,
+    "supabase_ddl": 0,
+    "quote_reads": 0,
+    "feature_calculation": false,
+    "inference": false,
+    "target_outcomes_read": false,
+    "training_or_refit": false,
+    "production_pickle_changes": false,
+    "original_v2_contract_changes": false,
+    "schedule_changes": false,
+    "main_changes": false,
+    "merge_performed": false
+  },
+  "reason": "The free tier advertises all endpoints and leagues at 1,000 requests/day and lists Serie A, fixtures/results, goals, cards and team match statistics. However the official documented team-stat field list does not include corners, leaving six of the original 19 frozen features without a documented source. Detailed data coverage varies by competition and exact Serie A 2026/27 field completeness was not authenticated. Terms allow use in own analysis/products and prohibit raw-feed redistribution, but do not expressly settle ML training, private raw-response retention, or upstream league/provider rights. The API does not document source-first-observed or per-field correction timestamps. No integration is authorized."
+}
