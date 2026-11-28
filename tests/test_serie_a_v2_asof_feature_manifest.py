@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import pytest
 import market_anchor_v2_direct_access as direct_access
+import serie_a_v2_asof_feature_manifest as feature_manifest
 
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import shadow_preview
@@ -16,6 +17,7 @@ def _allow_synthetic_provider_rights_for_offline_manifest_tests(monkeypatch):
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(direct_access, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
 
 QUOTE = {
     "event_id": "test-v2-a",
@@ -258,3 +260,53 @@ def test_online_manifest_matches_original_builder_after_frozen_30_match_truncati
         else:
             assert actual == pytest.approx(float(expected), abs=1e-12)
 
+
+
+class _UntouchableFeatureInput:
+    def __getattribute__(self, name):
+        raise AssertionError(f"feature input inspected before provider-rights preflight: {name}")
+
+
+@pytest.mark.parametrize("blocked_scope", ["source_capture", "inference"])
+def test_asof_feature_builder_requires_both_provider_scopes_before_inspecting_inputs(
+    monkeypatch, blocked_scope
+):
+    calls = []
+
+    def source_rights():
+        calls.append("source_capture")
+        if blocked_scope == "source_capture":
+            raise PermissionError("source capture rights unresolved")
+        return {"scope_status": "SYNTHETIC_TEST_ONLY"}
+
+    def inference_access():
+        calls.append("inference")
+        if blocked_scope == "inference":
+            raise PermissionError("frozen inference access is held")
+        return {"access_scope": "SYNTHETIC_TEST_ONLY"}
+
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", source_rights)
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", inference_access)
+
+    with pytest.raises(PermissionError, match="rights unresolved|access is held"):
+        build_manifest(_UntouchableFeatureInput(), _UntouchableFeatureInput())
+
+    assert calls == (
+        ["source_capture"]
+        if blocked_scope == "source_capture"
+        else ["source_capture", "inference"]
+    )
+
+
+def test_asof_feature_cli_checks_provider_rights_before_argument_or_file_access(monkeypatch):
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_rights",
+        lambda: (_ for _ in ()).throw(PermissionError("source capture rights unresolved")),
+    )
+    monkeypatch.setattr(
+        direct_access, "require_v2_inference_access",
+        lambda: pytest.fail("inference access checked after source rights were denied"),
+    )
+
+    with pytest.raises(PermissionError, match="source capture rights unresolved"):
+        feature_manifest.main()
