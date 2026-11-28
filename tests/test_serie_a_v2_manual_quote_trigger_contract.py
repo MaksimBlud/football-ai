@@ -96,3 +96,37 @@ def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds
     assert 'workflow_dispatch:' in forward
     assert 'push:' in forward
     assert '"serie_a_v2_current_form_forward_capture.py"' in forward
+
+def test_original_forward_workflow_attests_source_before_saved_quote_reader():
+    workflow = FREE.read_text(encoding="utf-8")
+    attestation_name = "Attest original historical source ZIP from real GitHub Actions (no quotes read)"
+    preview_name = "Generate actual original frozen V2 source-verified read-only preview"
+
+    def step_block(name):
+        lines = workflow.splitlines()
+        start = next(
+            (i for i, line in enumerate(lines) if line == f"      - name: {name}"),
+            None,
+        )
+        assert start is not None, f"missing original V2 workflow step: {name}"
+        end = next(
+            (
+                i for i in range(start + 1, len(lines))
+                if lines[i].startswith("      - name: ")
+                or lines[i].startswith("      - uses: ")
+            ),
+            len(lines),
+        )
+        return "\n".join(lines[start:end])
+
+    attestation = step_block(attestation_name)
+    preview = step_block(preview_name)
+    assert workflow.index(attestation_name) < workflow.index(preview_name)
+    assert "python serie_a_v2_attest_real_source.py" in attestation
+    assert "python serie_a_v2_forward_capture.py" in preview
+
+    attestor = Path("serie_a_v2_attest_real_source.py").read_text(encoding="utf-8")
+    assert "create_client(" not in attestor
+    assert "fetch_saved_upcoming_serie_a_quotes" not in attestor
+    assert 'table("odds_snapshots")' not in attestor
+
