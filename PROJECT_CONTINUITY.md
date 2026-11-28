@@ -1,3 +1,96 @@
+## 2026-11-28 01:18 UTC — Original V2 provider-rights restack and fresh runtime audit
+
+This checkpoint supersedes the earlier current-form chain status where noted. It is documentation-only; no live workflow was dispatched.
+
+### Fresh repository and integration state
+
+- Default branch `main` is still exact SHA `40887ebb215730190d7a6c7a1693373ec4afcdfc`; repository metadata confirms `private=false` / public.
+- Root workflow hold [PR #781](https://github.com/MaksimBlud/football-ai/pull/781) remains OPEN / Ready for review / mergeable / unmerged at `8059553b6b0db4a76b94989bddbc0e4a065aa90a`. Its eight exact-head workflows remain SUCCESS. Until owner HUMAN-MERGE and a fresh-main audit, the hold is not active on main.
+- [PR #990](https://github.com/MaksimBlud/football-ai/pull/990) remains the current-form redirect/persisted-quote restack, exact HEAD `9ecf31622e10b5536c0a7fbcbed255e8bfeae502`, base exact #989 HEAD `f3488cb8328b263d93d271cf9e75c410839dfdcf`.
+- New [PR #991](https://github.com/MaksimBlud/football-ai/pull/991) is a Draft child of #990. Exact HEAD `6b39c22b8064f029fdf8ddf29a58d150841ed965`, exact base #990 HEAD `9ecf31622e10b5536c0a7fbcbed255e8bfeae502`. It restacks the existing provider-rights controls from #958 onto the current original-forward chain; it does not grant rights or change the model.
+- Final exact-head CI for #991:
+  - Source-first isolated validation [#46091963891](https://github.com/MaksimBlud/football-ai/actions/runs/46091963891): Python 3.11 and 3.12, **145 passed each**; compile and production `.pkl` diff guards passed.
+  - Provider-rights validation [#46091963883](https://github.com/MaksimBlud/football-ai/actions/runs/46091963883): Python 3.11 and 3.12, **134 passed each**; compile and production `.pkl` diff guards passed.
+  - Push validation [#46091959327](https://github.com/MaksimBlud/football-ai/actions/runs/46091959327): Python 3.11 and 3.12, **134 passed each**; compile and production `.pkl` diff guards passed.
+  - Earlier intermediate commits on this branch had failing runs; the three successful runs above are tied to the final exact HEAD only. #991 remains OPEN / Draft / HUMAN-MERGE only.
+- Existing strict feature-input identity validation must not be duplicated: [#966](https://github.com/MaksimBlud/football-ai/pull/966) has exact HEAD `b086251e58eb78af018dd5159231c0f7cfa68bb2` and 543 tests passed on each Python version; [#977](https://github.com/MaksimBlud/football-ai/pull/977) restacks that strict date-only and reversed home/away identity gate onto the separate frozen-candidate chain, exact HEAD `401426a2bc272450566be3c4d5427a316f3210cb`. Neither #966 nor #977 is an ancestor of #991. Do not treat main's reported 120 current-season identities as strictly validated until the identity-gate branch is integrated into the relevant source-capture ancestry.
+- No PR was merged and main was not changed. The separate Safe Engineering Agent Auto-Merge workflow run [#46092302640](https://github.com/MaksimBlud/football-ai/actions/runs/46092302640) completed as a healthy no-op: `SAFE_AUTO_MERGE_HEALTHY_NOOP: no eligible bot PR with verified six-check CI`; no PR was merged by that run.
+
+### Provider rights and direct-entrypoint guard
+
+- #991 adds fail-closed provider source-capture and frozen-inference rights checks to original-forward direct helpers, frozen shadow preview, live diagnostic reads and source attestation. The owner live-access flag and private-repository check are separate required controls.
+- Current Football-Data manifest remains denied: `research_source_capture_permitted=false`, `research_inference_permitted=false`, `ai_model_training_permitted=false`, provider-issued source/inference licences false, and `authorization=null`.
+- The policy evidence is a local paraphrase note, explicitly not provider-page bytes. Its presence/SHA is an integrity record, not provider permission. The two-session automated-download ceiling is not authorization. No automated source capture or V2 inference is cleared.
+- No source download or provider request was made in this audit.
+
+### Latest main runtime — actual Original V2 and current-form workflows
+
+The following job logs were read from the exact main runs; no artifacts were downloaded.
+
+1. Original V2 Forward-Only Preview [run #46046608625](https://github.com/MaksimBlud/football-ai/actions/runs/46046608625), main SHA above:
+   - **71 tests passed**.
+   - Historical source attestation verified 3,800 historical results / 10 pre-prospective source files; source ZIP SHA verification passed.
+   - `quotes_seen=0`, `future_quotes_checked=0`, `forecasts_created=0`, `v2_diagnostic_previews_captured=0`.
+   - `paid_provider_calls=0`, `supabase_writes=0`, mode `SOURCE_ARCHIVE_ONLY_NO_PREDICTION_NO_BET`.
+   - Small report artifact #15221678888 SHA-256 `999dc3238e8efb37d8b8f404beee17378c709f6ce116a9a674e301d4014366bf`.
+2. Current-Form Source Capture [run #46026789681](https://github.com/MaksimBlud/football-ai/actions/runs/46026789681):
+   - **19 tests passed**; log reports 120 current-season prior-day rows/identities and feature-input gate true, 10 frozen historical CSVs plus one current-season CSV (11 files), no outcome scoring, no paid calls and no Supabase writes.
+   - This 120 count remains provisional pending strict identity-gate ancestry (#966/#977).
+   - Public Actions artifact #15211304625: 440,660 bytes, SHA-256 `d7e2a644ac8659ef6de97a3be35f2e091ef5787fb657d5fa5dfdcb6bbaad2af5`. It was not downloaded.
+3. Current-Form Forward-Only Preview [run #46047607281](https://github.com/MaksimBlud/football-ai/actions/runs/46047607281):
+   - **53 tests passed**; source artifact and successful parent provenance/SHA were verified.
+   - `quotes_seen=0`, `v2_current_form_shadow_captured=0`, target outcomes not read/scored, paid calls 0 and Supabase writes 0.
+   - Despite zero quotes it re-uploaded the source bundle as public artifact #15223387104, SHA-256 `6c96174cf49dcebb3867337f6d6b2171a5d197265ac9008677a30625626c7a42`. It was not downloaded.
+4. Free Real-Quote Diagnostic [run #46034615245](https://github.com/MaksimBlud/football-ai/actions/runs/46034615245):
+   - **53 tests passed**, 10 public-source requests, zero quoted fixtures and zero diagnostics scored; zero paid-provider calls.
+   - Public report artifact #15215338622 SHA-256 `ecc824ea4f823c3744d88308d332c8e3eccd588a159bc42a3d682fb99891d5a8`. It was not downloaded.
+
+The last three source-related runs are historical runtime evidence, not permission to continue using Football-Data. Public source archives are an unresolved rights/privacy exposure while main is public and #781 is unmerged. Do not download, copy or republish their raw bytes. Do not dispatch these live workflows before the root hold is integrated and provider rights are explicitly cleared.
+
+### Fresh read-only pre-match Supabase inventory
+
+Only `public.odds_snapshots` metadata was selected: league, event identity, snapshot time, persistence time and kickoff time. No score, result, settlement or target-outcome columns were queried.
+
+| League | Rows | Events | Strict persisted pre-match rows | Future events with strict quote |
+|---|---:|---:|---:|---:|
+| Bundesliga | 404 | 35 | 394 | 0 |
+| EPL | 1,151 | 70 | 1,135 | 0 |
+| Eredivisie | 412 | 39 | 410 | 0 |
+| La Liga | 806 | 52 | 798 | 0 |
+| Ligue 1 | 394 | 35 | 387 | 0 |
+| Primeira Liga | 9 | 9 | 9 | 0 |
+| RPL | 156 | 15 | 153 | 0 |
+| Serie A | 625 | 63 | 620 | 0 |
+| Turkey Super Lig | 9 | 9 | 9 | 0 |
+| **Total** | **3,966** | **327** | **3,915** | **0** |
+
+The persistence-time predicate is `snapshot_time_utc <= created_at < commence_time_utc`. It does **not** prove source-before-quote: Supabase `created_at` is our persistence time, not upstream bookmaker publication time. A valid source-before-quote proof still requires independently timestamped source observation/archive and authenticated successful parent completion strictly before the saved quote. Latest strict Serie A snapshot: `2026-10-13T14:48:53.042620Z`.
+
+### Supabase security metadata — no remediation applied
+
+Security Advisor reports RLS disabled on five public tables: `teams`, `predictions`, `match_statistics`, `league_prediction_ledger`, and `epl_ai_market_pair_ledger`. Four other tables have RLS enabled but no policies: `competitions`, `match_stats`, `matches`, and `standings`. No RLS change was applied; enabling RLS without reviewed policies may block application access. The user’s no-DDL restriction remains binding.
+
+### Frozen original model and scientific status
+
+- Candidate SHA: `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`.
+- Training fingerprint: `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`.
+- 3,799 training rows; original 19-feature order and 20×2 weights unchanged.
+- `active_lambda=0` remains the market; `shadow_lambda=1` remains research-only.
+- Historical stability gate remains FAILED. Prospective outcome-read gate remains CLOSED at **0/30** eligible completed prospective forecasts. No protected target outcomes were read; no Brier/LogLoss comparison exists.
+- No candidate, feature, weight, scaler, imputer, production `.pkl`, Supabase data/schema, workflow schedule or other-agent setting changed. No paid API call, bet, publication, refit, threshold tuning or promotion occurred.
+
+### Next safe sequence
+
+1. Owner manually integrates exact #781 HEAD, then re-read fresh main and prove the root hold skips live source/quote access and every public raw-artifact upload.
+2. Reconcile the existing strict identity-gate branch (#977/#966) with the #991 rights chain without duplicating implementation or weakening the 30-event contract.
+3. Keep Football-Data source capture/inference denied until provider-issued rights are actually established; continue rights/coverage audits without API calls or downloads.
+4. Only after a permitted private source and permitted pre-kickoff quote exist, capture the unchanged 19-feature V2 vector, exact candidate SHA, source bytes/SHA, source observation time, parent completion time and quote chronology.
+5. Keep prospective target outcomes sealed until 30 valid primary events; then independently compare frozen V2 shadow vs de-vigged market using Brier and LogLoss. No refit or threshold tuning.
+
+HUMAN-MERGE only. No main update or merge in this checkpoint.
+
+---
+
 # Football AI — Project Continuity
 
 ## 2026-11-28 — Original V2 current-form transport and quote-persistence restack
