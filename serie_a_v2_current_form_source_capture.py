@@ -286,7 +286,7 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     source_row_count = len(frame)
     date_text = frame["Date"].fillna("").astype(str).str.strip()
     nonblank_dates = date_text.ne("")
-    if not date_text.loc[nonblank_dates].str.fullmatch(r"\\d{2}/\\d{2}/\\d{4}").all():
+    if not date_text.loc[nonblank_dates].str.fullmatch(r"\d{2}/\d{2}/\d{4}").all():
         raise ValueError("current-season source dates must use strict DD/MM/YYYY date-only format")
     parsed_dates = pd.to_datetime(
         date_text.where(nonblank_dates),
