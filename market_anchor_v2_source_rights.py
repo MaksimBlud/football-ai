@@ -192,7 +192,7 @@ def require_personal_research_inference_scope(
 ) -> dict:
     """Require the project's conservative clearance for frozen V2 inference.
 
-    The official data page and fair-use contact page were updated 2026-11-24. The current
+    The official data page and fair-use contact page were updated 2026-11-27. The current
     terms limit automated downloads and exclude commercial or AI data-training projects
     involving automated bots or scrapers. The project therefore keeps
     automated source capture and frozen-model inference fail-closed pending
