@@ -6,6 +6,7 @@ import zipfile
 
 import pytest
 import market_anchor_v2_direct_access as direct_access
+import serie_a_v2_current_form_forward_capture as forward_capture
 
 from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
@@ -36,6 +37,8 @@ def _allow_synthetic_provider_rights_for_offline_current_form_tests(monkeypatch)
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(direct_access, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(direct_access, "require_v2_inference_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
 HEAD = "a" * 40
 
 
@@ -661,3 +664,138 @@ def test_unverified_parent_cannot_admit_quote():
     assert report["v2_current_form_shadow_captured"] == 0
     assert report["blocked"]["SOURCE_PARENT_UNVERIFIED"] == 1
     assert report["rows"][0]["status"] == "SOURCE_PARENT_UNVERIFIED"
+
+
+class _UntouchableForwardInput:
+    def __iter__(self):
+        raise AssertionError("caller input was inspected before provider-rights preflight")
+
+    def __bool__(self):
+        raise AssertionError("caller input truthiness was inspected before provider-rights preflight")
+
+    def __len__(self):
+        raise AssertionError("caller input length was inspected before provider-rights preflight")
+
+    def get(self, *_args, **_kwargs):
+        raise AssertionError("caller mapping was inspected before provider-rights preflight")
+
+
+@pytest.mark.parametrize(
+    ("blocked_scope", "expected_calls"),
+    [
+        ("source_capture", ["source_capture"]),
+        ("inference", ["source_capture", "inference"]),
+    ],
+)
+def test_current_form_prepare_requires_both_provider_scopes_before_quotes_or_callbacks(
+    monkeypatch, tmp_path, blocked_scope, expected_calls
+):
+    calls = []
+
+    def source_rights():
+        calls.append("source_capture")
+        if blocked_scope == "source_capture":
+            raise PermissionError("source capture rights unresolved")
+        return {"scope_status": "SYNTHETIC_TEST_ONLY"}
+
+    def inference_rights():
+        calls.append("inference")
+        if blocked_scope == "inference":
+            raise PermissionError("frozen inference rights unresolved")
+        return {"scope_status": "SYNTHETIC_TEST_ONLY"}
+
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", source_rights)
+    monkeypatch.setattr(direct_access, "require_v2_inference_rights", inference_rights)
+    output_dir = tmp_path / "must-not-be-created"
+
+    with pytest.raises(PermissionError, match="rights unresolved"):
+        prepare_forward_capture(
+            _UntouchableForwardInput(),
+            _UntouchableForwardInput(),
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive callback ran before rights"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent callback ran before rights"),
+            write_sources_to=output_dir,
+        )
+
+    assert calls == expected_calls
+    assert not output_dir.exists()
+
+
+def test_current_form_artifact_discovery_and_download_require_provider_rights_before_private_check_or_network(
+    monkeypatch,
+):
+    calls = []
+
+    def denied_source_rights():
+        calls.append("source_capture")
+        raise PermissionError("source capture rights unresolved")
+
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", denied_source_rights)
+    monkeypatch.setattr(
+        direct_access, "require_v2_inference_rights",
+        lambda: pytest.fail("inference rights checked after source rights were denied"),
+    )
+    monkeypatch.setattr(
+        forward_capture, "require_private_repository",
+        lambda **_kwargs: pytest.fail("private-repository lookup ran before provider-rights preflight"),
+    )
+    network_calls = []
+
+    with pytest.raises(PermissionError, match="source capture rights unresolved"):
+        forward_capture.discover_archives(
+            token="synthetic-token",
+            get=lambda *args, **kwargs: network_calls.append((args, kwargs)),
+        )
+    with pytest.raises(PermissionError, match="source capture rights unresolved"):
+        forward_capture.get_archive(
+            123,
+            token="synthetic-token",
+            get=lambda *args, **kwargs: network_calls.append((args, kwargs)),
+        )
+
+    assert calls == ["source_capture", "source_capture"]
+    assert network_calls == []
+
+
+def test_current_form_archive_parsing_and_parent_verification_require_rights_before_inputs(monkeypatch):
+    def denied_source_rights():
+        raise PermissionError("source capture rights unresolved")
+
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", denied_source_rights)
+    monkeypatch.setattr(
+        direct_access, "require_v2_inference_rights",
+        lambda: pytest.fail("inference rights checked after source rights were denied"),
+    )
+    untouched = _UntouchableForwardInput()
+
+    with pytest.raises(PermissionError, match="source capture rights unresolved"):
+        forward_capture.verify_and_load_archive(untouched, untouched, untouched)
+    with pytest.raises(PermissionError, match="source capture rights unresolved"):
+        forward_capture.verify_source_run(
+            untouched,
+            quote_time=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            token="synthetic-token",
+            get=lambda *_args, **_kwargs: pytest.fail("GitHub API was called before rights"),
+        )
+    with pytest.raises(PermissionError, match="source capture rights unresolved"):
+        forward_capture.verify_latest_source_archive(
+            untouched,
+            as_of_utc=datetime(2026, 10, 19, 5, 40, tzinfo=timezone.utc),
+            load_archive=lambda *_args, **_kwargs: pytest.fail("archive callback ran before rights"),
+            verify_parent_run=lambda *_args, **_kwargs: pytest.fail("parent callback ran before rights"),
+        )
+
+
+def test_current_form_forward_cli_checks_provider_rights_before_argument_or_credential_access(monkeypatch):
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_rights",
+        lambda: (_ for _ in ()).throw(PermissionError("source capture rights unresolved")),
+    )
+    monkeypatch.setattr(
+        direct_access, "require_v2_inference_rights",
+        lambda: pytest.fail("inference rights checked after source rights were denied"),
+    )
+
+    with pytest.raises(PermissionError, match="source capture rights unresolved"):
+        forward_capture.main()
