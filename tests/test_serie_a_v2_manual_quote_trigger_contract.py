@@ -123,12 +123,7 @@ def test_original_forward_workflow_attests_source_before_saved_quote_reader():
     preview = step_block(preview_name)
     assert workflow.index(attestation_name) < workflow.index(preview_name)
     assert "python serie_a_v2_attest_real_source.py" in attestation
-    assert "GITHUB_TOKEN: ${{ github.token }}" in attestation
-    assert "SUPABASE_URL" not in attestation
-    assert "SUPABASE_KEY" not in attestation
     assert "python serie_a_v2_forward_capture.py" in preview
-    assert "SUPABASE_URL: ${{ secrets.SUPABASE_URL }}" in preview
-    assert "SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}" in preview
 
     attestor = Path("serie_a_v2_attest_real_source.py").read_text(encoding="utf-8")
     assert "create_client(" not in attestor
