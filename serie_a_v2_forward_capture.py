@@ -310,6 +310,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     require_v2_live_access()
     v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_source_capture_access()
     v2_access.require_v2_inference_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid GitHub artifact id")
@@ -668,6 +669,7 @@ def main() -> None:
         raise RuntimeError("wrong GitHub repository scope")
     require_v2_live_access()
     v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_source_capture_access()
     v2_access.require_v2_inference_access()
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
