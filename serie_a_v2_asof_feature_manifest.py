@@ -87,8 +87,17 @@ def _validate_history_unchecked(history: pd.DataFrame) -> pd.DataFrame:
 def _stats_asof_unchecked(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque]:
     """Internal implementation; caller must already have passed the V2 rights gate."""
     # Strictly exclude ALL same-UTC-calendar-day matches: historic data have no reliable kickoff clock.
+    if (
+        not isinstance(before_day, datetime)
+        or before_day.tzinfo is None
+        or before_day.utcoffset() is None
+    ):
+        raise ValueError("before_day must have a real UTC offset")
+    before_day_utc = before_day.astimezone(timezone.utc)
     histories: dict[str, deque] = defaultdict(lambda: deque(maxlen=30))
-    usable = frame.loc[frame["_match_date"] < pd.Timestamp(before_day.date())]
+    usable = frame.loc[
+        frame["_match_date"] < pd.Timestamp(before_day_utc.date())
+    ]
     for _, match in usable.iterrows():
         row = match.to_dict()
         home, away = row["_home"], row["_away"]
