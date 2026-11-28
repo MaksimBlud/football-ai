@@ -98,8 +98,17 @@ def fake_verified_parent_run(archive, quote_time):
     assert archive["run_id"] == 456
     assert archive["head_sha"] == "a" * 40
     assert quote_time.tzinfo is not None
-    return {"run_completed_at_utc": "2026-10-13T15:01:00Z",
-            "workflow_path": SOURCE_WORKFLOW_PATH, "run_id": 456}
+    return {
+        "run_id": 456,
+        "run_head_sha": "a" * 40,
+        "workflow_path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "run_created_at_utc": "2026-10-13T14:40:00Z",
+        "run_completed_at_utc": "2026-10-13T15:01:00Z",
+    }
 
 
 
@@ -117,6 +126,8 @@ def test_forward_v2_scores_only_after_real_prior_archive_and_never_promotes():
     assert report["uses_2026_27_results"] is False
     assert report["paid_provider_calls"] == report["supabase_writes"] == 0
     assert report["eligible_for_frozen_prospective_cohort"] is False
+    assert report["rows"][0]["source_provenance"]["archive_sha256_verified"] is True
+    assert report["rows"][0]["source_provenance"]["parent_run"]["run_completed_at_utc"] == "2026-10-13T15:01:00+00:00"
     assert report["eligible_for_product_publication"] is False
     assert report["no_bet"] is True
     row = report["rows"][0]
@@ -333,6 +344,11 @@ def _fully_verified_parent(archive, quote_time, completed="2026-10-13T15:01:00Z"
         "run_id": archive["run_id"],
         "run_head_sha": archive["head_sha"],
         "workflow_path": SOURCE_WORKFLOW_PATH,
+        "head_branch": "main",
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "run_created_at_utc": "2026-10-13T14:40:00Z",
         "run_completed_at_utc": completed,
     }
 
