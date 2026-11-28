@@ -824,3 +824,101 @@ def test_reversed_duplicate_gate_identity_fails_before_any_source_download(tmp_p
         )
     assert calls == []
     assert not output_dir.exists()
+
+def test_current_csv_rejects_timestamp_or_noncanonical_date_values():
+    raw = current_csv(n=30).decode().replace(
+        "01/08/2026", "01/08/2026 12:00", 1
+    ).encode()
+    with pytest.raises(ValueError, match="strict DD/MM/YYYY"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_non_integer_feature_counts():
+    raw = current_csv(n=30).decode().replace(
+        "1,0,H,5,3,2,1,0,0", "1,0,H,5.5,3,2,1,0,0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="non-integer HC"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_non_finite_feature_counts():
+    raw = current_csv(n=30).decode().replace(
+        "1,0,H,5,3,2,1,0,0", "1,0,H,inf,3,2,1,0,0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="missing/invalid HC"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_invalid_full_time_result_markers():
+    raw = current_csv(n=30).decode().replace(
+        "1,0,H,5,3,2,1,0,0", "1,0,X,5,3,2,1,0,0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="invalid full-time result marker"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_past_partial_statistics_without_result():
+    raw = current_csv(n=30).decode().replace(
+        "1,0,H,5,3,2,1,0,0", "1,0,,5,3,2,1,0,0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="partial statistics"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_future_statistics_even_without_result():
+    future_stats = ",".join([
+        "20/10/2026", "Future Home", "Future Away",
+        "", "", "", "1", "", "", "", "", "",
+    ])
+    raw = (current_csv(n=30).decode().rstrip() + "\n" + future_stats + "\n").encode()
+    with pytest.raises(ValueError, match="future statistics data"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_rejects_result_or_statistics_without_fixture_date():
+    missing_date = ",".join([
+        "", "Missing Date Home", "Missing Date Away",
+        "1", "0", "H", "5", "3", "2", "1", "0", "0",
+    ])
+    raw = (current_csv(n=30).decode().rstrip() + "\n" + missing_date + "\n").encode()
+    with pytest.raises(ValueError, match="without a fixture date"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )
+
+
+def test_current_csv_requires_a_real_utc_offset():
+    class NoOffset(tzinfo):
+        def utcoffset(self, _dt):
+            return None
+
+        def dst(self, _dt):
+            return None
+
+    with pytest.raises(ValueError, match="timezone-aware"):
+        validate_current_season_csv(
+            current_csv(n=30),
+            captured_at=datetime(2026, 10, 18, 8, tzinfo=NoOffset()),
+        )
+
+
+def test_current_csv_requires_full_time_result_to_match_exact_goal_comparison():
+    raw = current_csv(n=30).decode().replace(
+        "1,0,H,5,3,2,1,0,0", "1,0,D,5,3,2,1,0,0", 1
+    ).encode()
+    with pytest.raises(ValueError, match="does not match full-time goals"):
+        validate_current_season_csv(
+            raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
+        )

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 from datetime import date, datetime, timezone
 import hashlib
+import math
 from io import BytesIO
 import json
 import os
@@ -261,14 +262,18 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
 
 
 def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[pd.DataFrame, int]:
-    """Return only completed, fully observed rows strictly before capture day.
+    """Return only complete, integer-valued prior-day rows with unambiguous dates.
 
-    Football-Data is date-only. Same-day results are excluded because no reliable
+    Football-Data is date-only. Same-day rows are excluded because no reliable
     kickoff clock is available. Unplayed future rows may exist in the CSV but
-    are never converted to features. The returned frame contains no incomplete
-    fixtures and exactly the original V2 builder's required columns.
+    must have no result/stat fields. Past rows with partial completion data are
+    rejected rather than silently omitted from the original V2 rolling windows.
     """
-    if captured_at.tzinfo is None:
+    if (
+        not isinstance(captured_at, datetime)
+        or captured_at.tzinfo is None
+        or captured_at.utcoffset() is None
+    ):
         raise ValueError("current-season source capture clock must be timezone-aware")
     if not raw or len(raw) > MAX_CURRENT_CSV_BYTES:
         raise ValueError("current-season CSV is empty or exceeds size limit")
@@ -277,30 +282,73 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     if missing:
         raise ValueError("current-season source lacks required original V2 statistics: "
                          + ", ".join(sorted(missing)))
-    nonblank_dates = frame["Date"].notna()
-    parsed_dates = pd.to_datetime(frame["Date"], dayfirst=True, format="mixed", errors="coerce")
+
+    source_row_count = len(frame)
+    date_text = frame["Date"].fillna("").astype(str).str.strip()
+    nonblank_dates = date_text.ne("")
+    if not date_text.loc[nonblank_dates].str.fullmatch(r"\d{2}/\d{2}/\d{4}").all():
+        raise ValueError("current-season source dates must use strict DD/MM/YYYY date-only format")
+    parsed_dates = pd.to_datetime(
+        date_text.where(nonblank_dates),
+        format="%d/%m/%Y",
+        errors="coerce",
+    )
     if parsed_dates.loc[nonblank_dates].isna().any():
         raise ValueError("current-season source contains an unparseable fixture date")
+
+    ftr = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
+    valid_result = ftr.isin(("H", "D", "A"))
+    invalid_result_marker = ftr.ne("") & ~valid_result
+    if invalid_result_marker.any():
+        raise ValueError("current-season source contains an invalid full-time result marker")
+
+    numeric_raw = frame.loc[:, list(NUMERIC_COLUMNS)]
+    numeric_present = numeric_raw.apply(
+        lambda column: column.notna() & column.astype(str).str.strip().ne("")
+    ).any(axis=1)
+    has_completion_data = valid_result | numeric_present
+    if ((~nonblank_dates) & has_completion_data).any():
+        raise ValueError("current-season source contains result/stat fields without a fixture date")
+
     frame = frame.loc[nonblank_dates].copy()
     frame["_parsed_date"] = parsed_dates.loc[nonblank_dates].dt.date
     cutoff = captured_at.astimezone(timezone.utc).date()
-    ftr = frame["FTR"].fillna("").astype(str).str.strip().str.upper()
-    valid_result = ftr.isin(("H", "D", "A"))
-    future_completed = frame["_parsed_date"].gt(cutoff) & valid_result
-    if future_completed.any():
+    future = frame["_parsed_date"].gt(cutoff)
+    if (future & valid_result.loc[frame.index]).any():
         raise ValueError("current-season source contains a completed result after capture date")
-    completed = frame.loc[frame["_parsed_date"].lt(cutoff) & valid_result].copy()
+    if (future & numeric_present.loc[frame.index]).any():
+        raise ValueError("current-season source contains future statistics data")
+
+    past = frame["_parsed_date"].lt(cutoff)
+    past_partial = past & ~valid_result.loc[frame.index] & numeric_present.loc[frame.index]
+    if past_partial.any():
+        raise ValueError("past current-season fixture has partial statistics without a valid full-time result")
+
+    completed = frame.loc[past & valid_result.loc[frame.index]].copy()
     completed["FTR"] = ftr.loc[completed.index]
     if completed.empty:
         raise ValueError("current-season source has no completed prior-day matches")
     for field in NUMERIC_COLUMNS:
-        completed[field] = pd.to_numeric(completed[field], errors="coerce")
-        if completed[field].isna().any() or (completed[field] < 0).any():
+        values = pd.to_numeric(completed[field], errors="coerce")
+        if (
+            values.isna().any()
+            or not values.map(math.isfinite).all()
+            or (values < 0).any()
+        ):
             raise ValueError("completed current-season match has missing/invalid " + field)
-    if ((completed["FTHG"] > completed["FTAG"]) != (completed["FTR"] == "H")).any() or (
-        (completed["FTHG"] < completed["FTAG"]) != (completed["FTR"] == "A")
-    ).any():
+        if (values % 1 != 0).any():
+            raise ValueError("completed current-season match has non-integer " + field)
+        completed[field] = values.astype("int64")
+
+    expected_result = completed.apply(
+        lambda row: "H" if row["FTHG"] > row["FTAG"]
+        else "A" if row["FTHG"] < row["FTAG"]
+        else "D",
+        axis=1,
+    )
+    if expected_result.ne(completed["FTR"]).any():
         raise ValueError("current-season result does not match full-time goals")
+
     identities = []
     for _, row in completed.iterrows():
         home = _canonical_team(row["HomeTeam"])
@@ -314,8 +362,7 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
         lambda value: value.strftime("%d/%m/%Y")
     )
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
-    return result, len(frame) - len(completed)
-
+    return result, source_row_count - len(completed)
 
 def _capture_source_archive(
     *,
