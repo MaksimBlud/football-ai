@@ -51,7 +51,7 @@ OLD_CUTOFF = pd.Timestamp("2026-07-01")
 def _require_current_form_forward_rights() -> dict:
     """Require both distinct provider scopes before inspecting source or quote inputs."""
     source_capture = direct_access.require_v2_source_capture_rights()
-    inference = direct_access.require_v2_inference_rights()
+    inference = direct_access.require_v2_inference_access()
     return {"source_capture": source_capture, "inference": inference}
 
 
