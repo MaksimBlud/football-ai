@@ -801,10 +801,6 @@ def test_gate_identity_audit_reconciles_aliases_and_rejects_reversed_duplicates(
         summarize_completed_primary_events(reversed_rows, before_date=date(2026, 10, 18))
 
 
-@pytest.mark.parametrize(
-    "bad_date",
-    ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1", "20261001"],
-)
 def test_gate_and_current_csv_identity_hash_share_alias_normalization():
     metadata = [{
         "match_date": "2026-08-01",
@@ -827,6 +823,10 @@ def test_gate_and_current_csv_identity_hash_share_alias_normalization():
     )
 
 
+@pytest.mark.parametrize(
+    "bad_date",
+    ["2026-10-01T12:00:00Z", "2026-10-01suffix", "2026-1-1", "20261001"],
+)
 def test_gate_rejects_noncanonical_or_timestamp_fixture_dates(bad_date):
     with pytest.raises(ValueError, match="canonical YYYY-MM-DD"):
         summarize_completed_primary_events(
