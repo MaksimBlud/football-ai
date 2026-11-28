@@ -1,6 +1,6 @@
 """Date-only Serie A V2 feature adapter: exact original features, fail-closed tests."""
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import pytest
@@ -44,6 +44,21 @@ def history():
         {**base, "Date": "15/10/2026", "HomeTeam": "Beta", "AwayTeam": "Delta",
          "FTHG": 8, "FTAG": 0, "FTR": "H"},
     ])
+
+
+def test_stats_asof_normalizes_non_utc_clock_before_date_cutoff_and_rejects_naive():
+    frame = feature_manifest._validate_history(history())
+    local_clock = datetime(
+        2026, 10, 13, 0, 30, tzinfo=timezone(timedelta(hours=3))
+    )
+    stats = feature_manifest._stats_asof(frame, before_day=local_clock)
+    # 00:30 at UTC+03:00 is 21:30 UTC on Oct 12; Oct 12 rows must be excluded.
+    assert len(stats["Alpha"]) == 1
+
+    with pytest.raises(ValueError, match="real UTC offset"):
+        feature_manifest._stats_asof(
+            frame, before_day=datetime(2026, 10, 13, 0, 30)
+        )
 
 
 def test_exact_frozen_19_features_and_no_same_day_outcome_leakage():
