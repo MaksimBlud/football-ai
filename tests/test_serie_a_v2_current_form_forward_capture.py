@@ -38,7 +38,6 @@ def _allow_synthetic_provider_rights_for_offline_current_form_tests(monkeypatch)
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(direct_access, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
-    monkeypatch.setattr(direct_access, "require_v2_inference_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
 HEAD = "a" * 40
 
 
@@ -705,7 +704,7 @@ def test_current_form_prepare_requires_both_provider_scopes_before_quotes_or_cal
         return {"scope_status": "SYNTHETIC_TEST_ONLY"}
 
     monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", source_rights)
-    monkeypatch.setattr(direct_access, "require_v2_inference_rights", inference_rights)
+    monkeypatch.setattr(direct_access, "require_v2_inference_access", inference_rights)
     output_dir = tmp_path / "must-not-be-created"
 
     with pytest.raises(PermissionError, match="rights unresolved"):
@@ -733,7 +732,7 @@ def test_current_form_artifact_discovery_and_download_require_provider_rights_be
 
     monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", denied_source_rights)
     monkeypatch.setattr(
-        direct_access, "require_v2_inference_rights",
+        direct_access, "require_v2_inference_access",
         lambda: pytest.fail("inference rights checked after source rights were denied"),
     )
     monkeypatch.setattr(
@@ -764,7 +763,7 @@ def test_current_form_archive_parsing_and_parent_verification_require_rights_bef
 
     monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", denied_source_rights)
     monkeypatch.setattr(
-        direct_access, "require_v2_inference_rights",
+        direct_access, "require_v2_inference_access",
         lambda: pytest.fail("inference rights checked after source rights were denied"),
     )
     untouched = _UntouchableForwardInput()
@@ -793,7 +792,7 @@ def test_current_form_forward_cli_checks_provider_rights_before_argument_or_cred
         lambda: (_ for _ in ()).throw(PermissionError("source capture rights unresolved")),
     )
     monkeypatch.setattr(
-        direct_access, "require_v2_inference_rights",
+        direct_access, "require_v2_inference_access",
         lambda: pytest.fail("inference rights checked after source rights were denied"),
     )
 
