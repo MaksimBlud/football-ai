@@ -1,5 +1,5 @@
 """Real original V2 JSON weights; strict read-only preview and refusal tests."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -53,6 +53,20 @@ def features(**overrides):
     }
     row.update(overrides)
     return row
+
+
+class _NoUtcOffset(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+
+def test_shadow_preview_rejects_tzinfo_without_a_real_utc_offset():
+    invalid_clock = datetime(2026, 10, 13, 15, 0, tzinfo=_NoUtcOffset())
+    with pytest.raises(ValueError, match="real UTC offset"):
+        v2_preview.shadow_preview([], [], as_of_utc=invalid_clock)
 
 
 def test_actual_sha_restored_candidate_is_used_and_shadow_is_not_active_market():
