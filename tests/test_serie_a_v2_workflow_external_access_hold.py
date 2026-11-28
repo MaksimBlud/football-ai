@@ -971,3 +971,26 @@ def test_pinned_checkout_and_setup_python_are_offline_allowlisted():
     assert not _has_unapproved_action(
         "      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
     )
+
+def test_frozen_v2_shadow_test_workflow_uses_immutable_actions_and_no_persisted_checkout_credentials():
+    path = ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
+    text = _workflow(path)
+    assert _action_refs(text) == [
+        "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+    ]
+    lines = text.splitlines()
+    checkout_index = next(
+        (i for i, line in enumerate(lines)
+         if line == "      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"),
+        None,
+    )
+    assert checkout_index is not None, "immutable checkout action missing"
+    checkout_end = next(
+        (i for i in range(checkout_index + 1, len(lines))
+         if lines[i].startswith("      - ")),
+        len(lines),
+    )
+    checkout_block = "\\n".join(lines[checkout_index:checkout_end])
+    assert "persist-credentials: false" in checkout_block
+    assert "persist-credentials: true" not in checkout_block
