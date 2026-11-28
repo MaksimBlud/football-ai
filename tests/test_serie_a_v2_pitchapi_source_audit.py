@@ -35,7 +35,7 @@ def test_pitchapi_remains_hold_until_rights_fields_and_asof_provenance_are_verif
     assert manifest["production_pickle_changed"] is False
 
 
-def test_pitchapi_free_tier_is_research_evaluation_not_commercial_permission():
+def test_pitchapi_free_tier_limits_and_plan_positioning_are_accurate():
     manifest = json.loads(
         (ROOT / "research/source_rights/pitchapi.json").read_text(encoding="utf-8")
     )
@@ -46,8 +46,12 @@ def test_pitchapi_free_tier_is_research_evaluation_not_commercial_permission():
     assert manifest["free_usage_scope"] == "side_projects_research_and_evaluation"
     assert manifest["paid_tier_exists"] is True
     assert manifest["pro_monthly_price_eur"] == 4.99
-    assert manifest["pro_commercial_use_explicitly_included"] is True
+    assert manifest["pro_unlimited_requests_claimed"] is True
+    assert manifest["pro_usage_scope"] == "products_and_daily_pipelines"
+    assert manifest["pro_product_daily_pipeline_positioned"] is True
+    assert manifest["pro_commercial_use_explicitly_permitted"] is False
     assert manifest["free_commercial_use_explicitly_permitted"] is False
+    assert manifest["commercial_use_scope_explicitly_defined"] is False
 
 
 def test_pitchapi_audit_does_not_change_the_original_v2_candidate():
