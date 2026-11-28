@@ -1,6 +1,6 @@
 """Date-only Serie A V2 feature adapter: exact original features, fail-closed tests."""
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 
 import pandas as pd
 import pytest
@@ -46,6 +46,14 @@ def history():
     ])
 
 
+class _NoUtcOffset(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+    def dst(self, dt):
+        return None
+
+
 def test_stats_asof_normalizes_non_utc_clock_before_date_cutoff_and_rejects_naive():
     frame = feature_manifest._validate_history(history())
     local_clock = datetime(
@@ -58,6 +66,10 @@ def test_stats_asof_normalizes_non_utc_clock_before_date_cutoff_and_rejects_naiv
     with pytest.raises(ValueError, match="real UTC offset"):
         feature_manifest._stats_asof(
             frame, before_day=datetime(2026, 10, 13, 0, 30)
+        )
+    with pytest.raises(ValueError, match="real UTC offset"):
+        feature_manifest._stats_asof(
+            frame, before_day=datetime(2026, 10, 13, 0, 30, tzinfo=_NoUtcOffset())
         )
 
 
