@@ -3,15 +3,15 @@
 The current public main must not keep downloading provider CSVs, reading quote
 snapshots, or publishing source archives while provider rights and private
 artifact storage are unresolved. The workflows keep their offline tests and
-existing schedules; live access is held and artifacts publish only after successful runs.
+existing schedules; live access and artifact publication additionally require GitHub to confirm that this repository is private.
 """
 from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED"
-LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
-UPLOAD_GATE = "${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+LIVE_GATE = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}"
+UPLOAD_GATE = "${{ success() && env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' && steps.private-storage.outputs.is_private == 'true' }}"
 
 WORKFLOWS = {
     ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml": {
@@ -20,6 +20,7 @@ WORKFLOWS = {
             "Fetch and SHA-archive public source, preview original frozen V2 diagnostics",
         ),
         "upload": "Archive diagnostic and exact public CSV bytes for provenance",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-forward-preview.yml": {
         "cron": "8 8 * * *",
@@ -28,6 +29,7 @@ WORKFLOWS = {
             "Generate actual original frozen V2 source-verified read-only preview",
         ),
         "upload": "Save immutable original V2 predictions and exact older source bytes",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-current-form-source-capture.yml": {
         "cron": "50 5 * * *",
@@ -35,6 +37,7 @@ WORKFLOWS = {
             "Capture frozen historical seasons plus gated current-form source",
         ),
         "upload": "Archive source bytes and gate manifest for future quotes only",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/serie-a-v2-current-form-forward-preview.yml": {
         "cron": "18 8 * * *",
@@ -42,6 +45,7 @@ WORKFLOWS = {
             "Generate read-only current-form V2 shadow from already saved quotes",
         ),
         "upload": "Archive pre-kickoff V2 shadow and exact source ZIPs",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
     ".github/workflows/recover-market-anchor-v2-candidate.yml": {
         "cron": None,
@@ -50,6 +54,7 @@ WORKFLOWS = {
             "Prove frozen checksum, immutable recipe and research-only status",
         ),
         "upload": "Archive recovered frozen V2 research candidate",
+        "private_guard": "Verify private repository storage before live V2 access",
     },
 }
 
@@ -462,6 +467,8 @@ def _has_non_test_python_entrypoint(text: str) -> bool:
 
 
 def _is_original_v2_live_workflow(text: str, workflow_path: str = "") -> bool:
+    if workflow_path.endswith("market-anchor-v2-private-artifact-gate-validation.yml"):
+        return False
     reference_surface = f"{text} {workflow_path}".lower()
     has_v2_reference = any(
         marker in reference_surface for marker in ORIGINAL_V2_REFERENCE_MARKERS
@@ -606,6 +613,20 @@ def test_live_v2_workflow_inventory_cannot_grow_around_the_hold():
 
 
 
+def test_private_artifact_gate_validation_workflow_is_offline_only():
+    path = ".github/workflows/market-anchor-v2-private-artifact-gate-validation.yml"
+    text = _workflow(path)
+    assert "schedule:" not in text
+    assert "workflow_dispatch:" not in text
+    assert "SUPABASE_URL" not in text and "SUPABASE_KEY" not in text
+    assert "GITHUB_TOKEN:" not in text and "secrets." not in text
+    assert "actions/upload-artifact" not in text and "actions/download-artifact" not in text
+    assert "python -m pytest -q tests/test_serie_a_v2_workflow_external_access_hold.py" in text
+    assert "git diff --exit-code" in text
+    action_lines = [line.strip() for line in text.splitlines() if "uses:" in line]
+    assert len(action_lines) == 2
+    assert all(line.startswith("uses: actions/checkout@") or line.startswith("uses: actions/setup-python@") for line in action_lines)
+
 def test_original_market_anchor_1x2_v2_script_cannot_escape_live_workflow_inventory():
     # These original-model entrypoint forms must be recognized even when a new
     # workflow does not mention the older serie_a_v2_ or market_anchor_v2_ names.
@@ -716,6 +737,7 @@ def _workflow_step_blocks(text: str):
 def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
     """Find external-I/O, credential-bearing, or non-test Python steps outside the allowlist."""
     allowed_live = set(spec["live"])
+    private_guard = spec.get("private_guard")
     allowed_offline_python = OFFLINE_PYTHON_STEPS.get(path, set())
     upload_name = spec["upload"]
     unlisted = []
@@ -726,6 +748,17 @@ def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
         has_unapproved_action = _has_unapproved_action(block)
         has_python_entrypoint = _has_non_test_python_entrypoint(block)
 
+        if name == private_guard:
+            preflight_gate = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+            if preflight_gate not in block or "GH_TOKEN: ${{ github.token }}" not in block:
+                unlisted.append(f"{name} (missing gated read-only repository check)")
+            if "gh api" not in block or "GITHUB_REPOSITORY" not in block or "--jq .private" not in block:
+                unlisted.append(f"{name} (missing repository visibility lookup)")
+            if "SUPABASE_URL" in block or "SUPABASE_KEY" in block or "secrets." in block:
+                unlisted.append(f"{name} (private preflight must not access source/quote credentials)")
+            if "--method" in block or "-X " in block:
+                unlisted.append(f"{name} (private preflight must be read-only)")
+            continue
         if name in allowed_live:
             if LIVE_GATE not in block:
                 unlisted.append(f"{name} (missing live gate)")
@@ -743,6 +776,26 @@ def _unlisted_live_capable_steps(path: str, text: str, spec: dict) -> list[str]:
 
     return unlisted
 
+
+def test_private_storage_preflight_is_read_only_and_required_before_live_access():
+    preflight_gate = "${{ env.MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true' }}"
+    for path, spec in WORKFLOWS.items():
+        text = _workflow(path)
+        guard = _step_block(text, spec["private_guard"])
+        assert guard.count("if:") == 1
+        assert f"if: {preflight_gate}" in guard
+        assert "GH_TOKEN: ${{ github.token }}" in guard
+        assert "gh api" in guard and "repos/${GITHUB_REPOSITORY}" in guard and "--jq .private" in guard
+        assert "--method" not in guard and "-X " not in guard
+        assert "SUPABASE_URL" not in guard and "SUPABASE_KEY" not in guard and "secrets." not in guard
+        assert "echo \"is_private=true\" >> \"$GITHUB_OUTPUT\"" in guard
+        assert "echo \"is_private=false\" >> \"$GITHUB_OUTPUT\"" in guard
+        first_live = min(text.index(f"      - name: {name}") for name in spec["live"])
+        guard_name = spec.get("private_guard")
+        assert text.index("      - name: " + guard_name) < first_live
+        for name in spec["live"]:
+            assert LIVE_GATE in _step_block(text, name)
+        assert UPLOAD_GATE in _step_block(text, spec["upload"])
 
 def test_every_live_capable_step_in_existing_v2_workflows_is_explicitly_gated_or_offline():
     """A new step in an already-inventoried workflow must not bypass the named hold."""
@@ -971,6 +1024,7 @@ def test_pinned_checkout_and_setup_python_are_offline_allowlisted():
     assert not _has_unapproved_action(
         "      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
     )
+
 
 def test_frozen_v2_shadow_test_workflow_uses_immutable_actions_and_no_persisted_checkout_credentials():
     path = ".github/workflows/serie-a-frozen-v2-shadow-tests.yml"
