@@ -1,4 +1,4 @@
-# Version lock captured from successful Original V2 source-first CI run 46004386024.
+# Shared numerical core for the original V2 forward runtime.
 # Python 3.11 / ubuntu-latest. Versions only; wheel hashes are not asserted.
 numpy==2.4.6
 scipy==1.17.1

@@ -39,11 +39,9 @@ def test_original_forward_python_locks_are_complete_exact_version_sets():
         name for name in locks["3.11"]
         if locks["3.11"][name] != locks["3.12"][name]
     }
-    assert differences == {"numpy", "scipy"}
-    assert locks["3.11"]["numpy"] == "2.4.6"
-    assert locks["3.11"]["scipy"] == "1.17.1"
-    assert locks["3.12"]["numpy"] == "2.5.5"
-    assert locks["3.12"]["scipy"] == "1.18.1"
+    assert not differences, f"cross-Python lock drift: {sorted(differences)}"
+    assert locks["3.11"]["numpy"] == locks["3.12"]["numpy"] == "2.4.6"
+    assert locks["3.11"]["scipy"] == locks["3.12"]["scipy"] == "1.17.1"
     for name in ("pandas", "scikit-learn", "requests", "supabase", "pytest"):
         assert locks["3.11"][name] == locks["3.12"][name]
 
