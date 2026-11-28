@@ -8,10 +8,13 @@ on:
       - research/v2-original-forward-runtime-lock-20261127-run11
       - research/v2-current-form-identity-restack-on-991-20261128-run11
       - research/v2-frozen-candidate-restack-on-992-20261128-run11
+      - research/v2-asof-feature-manifest-rights-preflight-on-997-20261128-run11
     paths:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"
@@ -51,6 +54,8 @@ on:
       - "serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "serie_a_v2_current_form_forward_capture.py"
+      - "serie_a_v2_asof_feature_manifest.py"
+      - "tests/test_serie_a_v2_asof_feature_manifest.py"
       - "tests/test_serie_a_v2_current_form_forward_capture.py"
       - "serie_a_v2_current_form_source_capture.py"
       - "tests/test_serie_a_v2_current_form_source_capture.py"

@@ -22,6 +22,7 @@ def _allow_synthetic_rights_for_offline_tests(monkeypatch):
     monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", synthetic)
     monkeypatch.setattr(direct_access, "require_v2_inference_access", synthetic)
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", synthetic)
 
 
 def history_fixture():

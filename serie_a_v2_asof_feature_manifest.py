@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import market_anchor_v2_direct_access as direct_access
 from historical_football_signal_lab import TeamMatch, _snapshot, FEATURE_SETS
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import load_verified_original, parse_utc
@@ -98,7 +99,15 @@ def _stats_asof(frame: pd.DataFrame, *, before_day: datetime) -> dict[str, deque
     return histories
 
 
+def _require_asof_feature_access() -> dict:
+    """Require provider source-capture rights and live frozen-inference access before feature inputs."""
+    source_capture = direct_access.require_v2_source_capture_rights()
+    inference = direct_access.require_v2_inference_access()
+    return {"source_capture": source_capture, "inference": inference}
+
+
 def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
+    _require_asof_feature_access()
     _verify_original_feature_builder()
     original = load_verified_original()
     names = list(original["features"])
@@ -197,6 +206,7 @@ def build_manifest(history: pd.DataFrame, quotes: list[dict]) -> dict:
 
 
 def main() -> None:
+    _require_asof_feature_access()
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--existing-history-csv", required=True, type=Path)
     p.add_argument("--saved-quotes-json", required=True, type=Path)

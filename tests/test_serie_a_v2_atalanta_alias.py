@@ -19,6 +19,7 @@ def _allow_synthetic_provider_rights_for_offline_alias_tests(monkeypatch):
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(direct_access, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(direct_access, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
 
 BASE = {"HC": 5, "AC": 4, "HY": 2, "AY": 1, "HR": 0, "AR": 0}
 ASOF = datetime(2026, 10, 13, 15, 1, tzinfo=timezone.utc)
