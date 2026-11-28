@@ -419,17 +419,11 @@ def test_source_capture_workflow_is_default_deny_and_preserves_existing_schedule
     job_header = workflow.split("  capture-current-form:", 1)[1].split("    steps:", 1)[0]
     assert "SUPABASE_URL" not in job_header
     assert "SUPABASE_KEY" not in job_header
-    assert '"serie_a_v2_live_diagnostic_report.py"' in workflow
-    assert '"tests/test_serie_a_v2_live_diagnostic_report.py"' in workflow
-    assert "serie_a_v2_live_diagnostic_report.py" in workflow.split(
-        "name: Validate feature-input gate and source integrity rules", 1
-    )[1].split("      - name: Verify private repository storage before live V2 access", 1)[0]
-    assert "tests/test_serie_a_v2_live_diagnostic_report.py" in workflow.split(
-        "name: Validate feature-input gate and source integrity rules", 1
-    )[1].split("      - name: Verify private repository storage before live V2 access", 1)[0]
+    assert '"serie_a_v2_current_form_source_capture.py"' in workflow
+    assert '"tests/test_serie_a_v2_current_form_source_capture.py"' in workflow
 
 
-def test_current_form_capture_scopes_github_token_only_to_gated_capture_step():
+def test_current_form_capture_scopes_github_token_only_to_private_storage_check():
     workflow_path = (
         Path(__file__).resolve().parents[1]
         / ".github"
@@ -437,13 +431,18 @@ def test_current_form_capture_scopes_github_token_only_to_gated_capture_step():
         / "serie-a-v2-current-form-source-capture.yml"
     )
     workflow = workflow_path.read_text(encoding="utf-8")
+    private_check = workflow.split(
+        "- name: Verify private repository storage before live V2 access", 1
+    )[1].split("- name: Capture frozen historical seasons plus gated current-form source", 1)[0]
     capture_step = workflow.split(
         "- name: Capture frozen historical seasons plus gated current-form source", 1
     )[1].split("- name: Archive source bytes and gate manifest for future quotes only", 1)[0]
     job_header = workflow.split("  capture-current-form:", 1)[1].split("    steps:", 1)[0]
-    assert "GITHUB_TOKEN: ${{ github.token }}" in capture_step
-    assert workflow.count("GITHUB_TOKEN:") == 1
-    assert "GITHUB_TOKEN" not in job_header
+    assert "GH_TOKEN: ${{ github.token }}" in private_check
+    assert workflow.count("GH_TOKEN:") == 1
+    assert "GH_TOKEN" not in job_header
+    assert "GITHUB_TOKEN" not in workflow
+    assert "GH_TOKEN" not in capture_step
     assert "SUPABASE_URL" not in job_header and "SUPABASE_KEY" not in job_header
     assert "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED == 'true'" in capture_step
     assert "steps.private-storage.outputs.is_private == 'true'" in capture_step
