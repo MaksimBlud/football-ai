@@ -139,6 +139,9 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     from the verified source workflow. A successful parent run must also have
     finished BEFORE the saved bookmaker quote, not only before inspection.
     """
+    require_v2_live_access()
+    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_inference_access()
     run_id = archive["run_id"]
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source archive is missing a parent GitHub run")

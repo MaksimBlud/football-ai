@@ -153,6 +153,7 @@ def test_malformed_authorization_scope_fails_closed_without_type_error(tmp_path)
 
 
 def test_direct_source_capture_checks_rights_before_private_storage(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     def deny():
         raise PermissionError("source-capture scope unresolved")
 
@@ -166,6 +167,7 @@ def test_direct_source_capture_checks_rights_before_private_storage(monkeypatch)
 
 
 def test_direct_source_capture_checks_private_storage_after_rights(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
     def deny_privacy():
         raise PermissionError("private storage is not approved")
 

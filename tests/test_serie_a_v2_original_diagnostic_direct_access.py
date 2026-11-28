@@ -67,6 +67,7 @@ def test_live_report_denies_before_inspecting_quotes_history_or_audit(monkeypatc
 
 
 def test_frozen_shadow_denies_before_iterating_market_or_feature_inputs(monkeypatch):
+    monkeypatch.setattr(frozen, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen, "require_v2_inference_access", _deny_inference)
 
     with pytest.raises(PermissionError, match="frozen inference scope unresolved"):
@@ -74,6 +75,7 @@ def test_frozen_shadow_denies_before_iterating_market_or_feature_inputs(monkeypa
 
 
 def test_saved_quote_reader_denies_before_supabase_client_access(monkeypatch):
+    monkeypatch.setattr(frozen, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen, "require_v2_inference_access", _deny_inference)
 
     class ForbiddenClient:
@@ -108,6 +110,7 @@ def test_live_diagnostic_cli_denies_before_database_import_or_source_fetch(monke
 
 
 def test_frozen_preview_cli_denies_before_database_or_feature_file_read(monkeypatch, tmp_path):
+    monkeypatch.setattr(frozen, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     feature_file = tmp_path / "missing-features.json"
     monkeypatch.setattr(frozen, "require_v2_inference_access", _deny_inference)
     monkeypatch.setattr(

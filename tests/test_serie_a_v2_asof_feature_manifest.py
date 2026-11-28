@@ -7,6 +7,13 @@ import pytest
 
 from serie_a_v2_asof_feature_manifest import build_manifest
 from serie_a_v2_frozen_shadow_preview import shadow_preview
+import serie_a_v2_frozen_shadow_preview as frozen_preview
+
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_provider_rights_for_offline_manifest_tests(monkeypatch):
+    monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
 
 QUOTE = {
     "event_id": "test-v2-a",
