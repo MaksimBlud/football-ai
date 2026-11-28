@@ -7,6 +7,7 @@ import zipfile
 import pytest
 import market_anchor_v2_direct_access as direct_access
 import serie_a_v2_current_form_forward_capture as forward_capture
+import serie_a_v2_current_form_source_capture as source_capture
 
 from serie_a_v2_current_form_forward_capture import (
     ARTIFACT_NAME,
@@ -103,6 +104,21 @@ def make_archive():
             "completed_source_rows": 1,
         })
     current = make_current_csv()
+    current_frame, _ = source_capture.validate_current_season_csv(
+        current, captured_at=datetime.fromisoformat(SOURCE_OBSERVED)
+    )
+    current_identity_audit = source_capture._current_season_fixture_identity_audit(current_frame)
+    metadata_rows = [
+        {
+            "match_date": (date(2026, 8, 1) + timedelta(days=i)).isoformat(),
+            "home_team": "Juventus",
+            "away_team": "Napoli",
+        }
+        for i in range(30)
+    ]
+    gate_identity_audit = source_capture.summarize_completed_primary_events(
+        metadata_rows, before_date=date(2026, 10, 18)
+    )
     files[CURRENT_FILENAME] = current
     source_files.append({
         "season_code": CURRENT_CODE,
@@ -116,7 +132,7 @@ def make_archive():
         "excluded_incomplete_or_same_day_rows": 0,
     })
     manifest = {
-        "schema_version": "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1",
+        "schema_version": "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V2",
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
         "mode": "RESEARCH_ONLY_CURRENT_FORM_SOURCE_ARCHIVE",
         "repository": "MaksimBlud/football-ai",
@@ -134,6 +150,7 @@ def make_archive():
         "current_season_source_sha256": hashlib.sha256(current).hexdigest(),
         "current_season_source_observed_at_utc": SOURCE_OBSERVED,
         "current_season_completed_prior_day_rows": 30,
+        "current_season_source_identity_audit": current_identity_audit,
         "current_season_total_csv_rows": 30,
         "current_season_excluded_incomplete_or_same_day_rows": 0,
         "feature_source_gate": {
@@ -145,7 +162,15 @@ def make_archive():
             "checked_at_utc": "2026-10-18T06:00:00+00:00",
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
+            "identity_audit": gate_identity_audit,
             "passed": True,
+        },
+        "preregistered_outcome_read_gate": {
+            "minimum_completed_primary_events": 30,
+            "observed_completed_primary_events": 30,
+            "outcomes_read_for_evaluation": False,
+            "outcome_gate_open": False,
+            "identity_audit": gate_identity_audit,
         },
         "feature_policy": {
             "use_current_season_matches_only_as_lagged_features": True,
@@ -201,6 +226,36 @@ def valid_parent(archive, *, quote_time):
         "run_created_at_utc": PARENT_CREATED,
         "run_completed_at_utc": PARENT_COMPLETED,
     }
+
+
+def test_current_form_archive_rejects_gate_identity_mismatch_even_with_valid_artifact_sha():
+    raw, archives = make_archive()
+    with zipfile.ZipFile(BytesIO(raw), "r") as archive_zip:
+        files = {name: archive_zip.read(name) for name in archive_zip.namelist()}
+    manifest = json.loads(files[MANIFEST_FILENAME])
+    manifest["feature_source_gate"]["identity_audit"][
+        "canonical_fixture_identity_set_sha256"
+    ] = "0" * 64
+    manifest["preregistered_outcome_read_gate"]["identity_audit"][
+        "canonical_fixture_identity_set_sha256"
+    ] = "0" * 64
+    files[MANIFEST_FILENAME] = (json.dumps(manifest, sort_keys=True) + "\n").encode()
+    rebuilt = BytesIO()
+    with zipfile.ZipFile(rebuilt, "w", zipfile.ZIP_DEFLATED) as archive_zip:
+        for name, body in files.items():
+            archive_zip.writestr(name, body)
+    tampered = rebuilt.getvalue()
+    archive_meta = dict(archives[0])
+    archive_meta["sha256"] = hashlib.sha256(tampered).hexdigest()
+    with pytest.raises(ValueError, match="identity set"):
+        forward_capture.verify_and_load_archive(
+            tampered,
+            archive_meta,
+            valid_parent(
+                archive_meta,
+                quote_time=datetime(2026, 10, 19, 5, 30, tzinfo=timezone.utc),
+            ),
+        )
 
 
 def test_current_form_v2_scores_only_future_quote_with_prequote_source_and_stays_no_bet(tmp_path):
