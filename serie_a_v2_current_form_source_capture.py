@@ -314,9 +314,10 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     frame["_parsed_date"] = parsed_dates.loc[nonblank_dates].dt.date
     cutoff = captured_at.astimezone(timezone.utc).date()
     future = frame["_parsed_date"].gt(cutoff)
-    future_has_data = future & (valid_result.loc[frame.index] | numeric_present.loc[frame.index])
-    if future_has_data.any():
-        raise ValueError("current-season source contains future result/statistics data")
+    if (future & valid_result.loc[frame.index]).any():
+        raise ValueError("current-season source contains a completed result after capture date")
+    if (future & numeric_present.loc[frame.index]).any():
+        raise ValueError("current-season source contains future statistics data")
 
     past = frame["_parsed_date"].lt(cutoff)
     past_partial = past & ~valid_result.loc[frame.index] & numeric_present.loc[frame.index]
