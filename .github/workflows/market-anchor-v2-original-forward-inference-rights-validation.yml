@@ -23,6 +23,12 @@ on:
       - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
       - "tests/test_market_anchor_v2_source_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_market_anchor_v2_training_rights.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_attest_real_source.py"
+      - "tests/test_serie_a_v2_attest_real_source_rights.py"
+      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_live_diagnostic_report.py"
@@ -42,6 +48,9 @@ on:
       - research/v2-provider-rights-restack-on-990-20261128-run11
     paths:
       - "serie_a_v2_forward_capture.py"
+      - "serie_a_v2_frozen_shadow_preview.py"
+      - "serie_a_v2_live_diagnostic_report.py"
+      - "serie_a_v2_attest_real_source.py"
       - "market_anchor_v2_direct_access.py"
       - "market_anchor_v2_source_rights.py"
       - "market_anchor_v2_provider_policy_evidence.py"
@@ -51,6 +60,12 @@ on:
       - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
       - "tests/test_market_anchor_v2_source_rights.py"
       - "tests/test_market_anchor_v2_source_capture_rights.py"
+      - "tests/test_market_anchor_v2_training_rights.py"
+      - "tests/test_serie_a_v2_frozen_shadow_preview.py"
+      - "tests/test_serie_a_v2_live_diagnostic_report.py"
+      - "tests/test_serie_a_v2_attest_real_source.py"
+      - "tests/test_serie_a_v2_attest_real_source_rights.py"
+      - "tests/test_serie_a_v2_original_diagnostic_direct_access.py"
       - "tests/test_serie_a_v2_forward_capture.py"
       - "tests/test_serie_a_v2_original_forward_direct_access.py"
       - ".github/workflows/market-anchor-v2-original-forward-inference-rights-validation.yml"
@@ -109,7 +124,13 @@ jobs:
           python -m pytest -q \
             tests/test_market_anchor_v2_source_rights.py \
             tests/test_market_anchor_v2_source_capture_rights.py \
+            tests/test_market_anchor_v2_training_rights.py \
             tests/test_serie_a_v2_original_forward_direct_access.py \
+            tests/test_serie_a_v2_original_diagnostic_direct_access.py \
+            tests/test_serie_a_v2_attest_real_source_rights.py \
+            tests/test_serie_a_v2_live_diagnostic_report.py \
+            tests/test_serie_a_v2_frozen_shadow_preview.py \
+            tests/test_serie_a_v2_attest_real_source.py \
             tests/test_serie_a_v2_forward_capture.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
