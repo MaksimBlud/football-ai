@@ -6,7 +6,7 @@
 
 ## 1. Free-plan claim
 
-The official football API page advertises a free plan with **1,000 requests/day (up to 7,000/month)**, all endpoints and all leagues, and lists Italy's Serie A among its competitions. It requires an API key. The provider describes live and historical match data, but the reviewed pages do not establish the exact historical season depth or authenticated Serie A 2026/27 per-match statistics completeness.
+The official API documentation states that, as of **2026-11-28**, the Free limit remains **2,000 requests/day and 14,000/month through 2026-11-30**; it drops to **1,000/day and 7,000/month from 2026-12-01**. The provider claims all endpoints and leagues are included and lists Italy's Serie A. Data endpoints require an API key. The provider describes historical results, but the reviewed pages do not establish the exact historical season depth or authenticated Serie A 2026/27 per-match statistics completeness.
 
 Official pages:
 - [Football API and free plan](https://sportapi.ai/football-api)
