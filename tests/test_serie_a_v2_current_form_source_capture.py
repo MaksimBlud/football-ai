@@ -880,7 +880,7 @@ def test_current_csv_rejects_future_statistics_even_without_result():
         "20/10/2026", "Future Home", "Future Away",
         "", "", "", "1", "", "", "", "", "",
     ])
-    raw = (current_csv(n=30).decode().rstrip() + "\\n" + future_stats + "\\n").encode()
+    raw = (current_csv(n=30).decode().rstrip() + "\n" + future_stats + "\n").encode()
     with pytest.raises(ValueError, match="future statistics data"):
         validate_current_season_csv(
             raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
@@ -892,7 +892,7 @@ def test_current_csv_rejects_result_or_statistics_without_fixture_date():
         "", "Missing Date Home", "Missing Date Away",
         "1", "0", "H", "5", "3", "2", "1", "0", "0",
     ])
-    raw = (current_csv(n=30).decode().rstrip() + "\\n" + missing_date + "\\n").encode()
+    raw = (current_csv(n=30).decode().rstrip() + "\n" + missing_date + "\n").encode()
     with pytest.raises(ValueError, match="without a fixture date"):
         validate_current_season_csv(
             raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
