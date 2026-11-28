@@ -29,47 +29,13 @@ from serie_a_v2_prequote_source_archive_gate import (
     ARCHIVE_REPORT, SOURCE_DIR, MAX_ZIP_BYTES, verify_archive,
 )
 
-REPOSITORY = "MaksimBlud/football-ai"
+from serie_a_v2_live_access_guard import (
+    GITHUB_API, REPOSITORY, require_private_repository, require_v2_live_access,
+)
+
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
-GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
-
-
-def require_v2_live_access() -> None:
-    """Fail closed unless the owner explicitly clears the V2 source/quote hold."""
-    allowed = os.environ.get("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "false")
-    if allowed.strip().lower() != "true":
-        raise PermissionError(
-            "original V2 source/quote access is held; "
-            "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true is required"
-        )
-
-
-def require_private_repository(*, token: str, get=requests.get) -> dict:
-    """Fail closed before source/quote access unless this exact repo is private."""
-    require_v2_live_access()
-    if not isinstance(token, str) or not token.strip():
-        raise ValueError("GitHub Actions read token missing for private-repository verification")
-    url = GITHUB_API
-    response = get(url, headers={
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }, timeout=30, allow_redirects=False)
-    if getattr(response, "url", None) != url:
-        raise ValueError("unexpected GitHub repository metadata response URL")
-    status = getattr(response, "status_code", None)
-    if status != 200:
-        raise ValueError(f"GitHub repository metadata request returned HTTP {status}")
-    data = response.json()
-    if not isinstance(data, dict) or data.get("full_name") != REPOSITORY:
-        raise ValueError("GitHub repository metadata identity mismatch")
-    if data.get("private") is not True:
-        raise PermissionError(
-            "original V2 source/quote access requires the exact GitHub repository to be private"
-        )
-    return {"repository": REPOSITORY, "private": True}
 
 def _validated_artifact_download_location(location: Any) -> str:
     """Accept only GitHub Actions' HTTPS Azure artifact-download redirect.
