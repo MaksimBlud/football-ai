@@ -1,5 +1,64 @@
 # Football AI — Project Continuity
 
+## 2026-11-28 — Original V2 current-form transport and quote-persistence restack
+
+This checkpoint supersedes the earlier current-form transport/persistence status below. It is evidence and integration tracking only; no live capture was dispatched.
+
+### Current source-first chain
+
+- Fresh main remains 40887ebb215730190d7a6c7a1693373ec4afcdfc; repository metadata still says private=false / public.
+- Root workflow hold PR #781 remains OPEN / Ready for review / mergeable / unmerged at 8059553b6b0db4a76b94989bddbc0e4a065aa90a; its eight exact-HEAD PR workflows are SUCCESS. Until HUMAN-MERGE, the root hold is not active on main.
+- PR #990 is a new Draft child of #989, restacking the already-existing current-form redirect work from #936 and persisted-quote preflight work from #953 onto the current #989 → #988 → #987 → #984 source-first chain. It is not a new provider integration or model experiment.
+- #990 base is exact #989 HEAD f3488cb8328b263d93d271cf9e75c410839dfdcf; #990 exact HEAD is 9ecf31622e10b5536c0a7fbcbed255e8bfeae502. Compare is 2 commits ahead / 0 behind; exactly two files changed (current-form forward reader and tests).
+- Exact isolated CI run #46085711031 completed SUCCESS on that exact HEAD. Python 3.11: 143 passed; Python 3.12: 143 passed. Both jobs passed dependency check, compilation, the complete source-first/frozen-contract regression suite and the production .pkl diff guard. #990 remains OPEN / Draft / HUMAN-MERGE only.
+
+### Restacked current-form guards
+
+- Artifact download now requires exactly one un-followed HTTP 302 from the exact GitHub artifact API URL, validates the HTTPS Azure host/authority/path/query, then makes a separate bare GET with redirects disabled and without GitHub Authorization/API headers. The storage response must be exactly HTTP 200 at the exact signed URL with no redirect history. Existing archive-size and SHA-256 checks remain downstream.
+- _latest_quotes() now requires persisted created_at before parent-run verification or source-archive callbacks: snapshot_time_utc <= created_at <= capture_clock and created_at < kickoff. The validated value is retained as quote_row_created_at_utc.
+- Offline regressions cover hostile/malformed redirects, missing locations, second redirects, unexpected final URLs, credential non-forwarding, invalid artifact IDs, missing tokens, and missing/backdated/future/post-kickoff quote persistence. Invalid persistence must cause zero parent/source callbacks.
+- The current-form saved-quote reader already receives created_at through the separate SAVED_QUOTE_KEYS projection from #987; the frozen inference MARKET_KEYS and original 19-feature contract are unchanged.
+
+### Re-read main workflow runtime and public-artifact exposure
+
+All four runs below were re-read from the GitHub Actions API and their job logs. They are historical execution evidence, not authorization to continue source access.
+
+1. Original V2 Forward-Only Preview run #46046608625, main SHA above:
+   - 71 tests passed; historical source attestation verified 3,800 historical rows / 10 pre-prospective source files.
+   - quotes_seen=0, future_quotes_checked=0, forecasts_created=0, v2_diagnostic_previews_captured=0; 0 paid calls and 0 Supabase writes.
+   - Small public report artifact #15221678888, SHA-256 999dc3238e8efb37d8b8f404beee17378c709f6ce116a9a674e301d4014366bf (1,460 bytes).
+2. Current-Form Source Capture run #46026789681:
+   - 19 tests passed; the metadata-only feature-input gate counted 120 canonical completed primary-event identities.
+   - Captured 10 frozen historical CSVs plus one current-season CSV (11 files); no evaluation scoring, 0 paid calls, 0 Supabase writes.
+   - Public Actions artifact #15211304625, 440,660 bytes, SHA-256 d7e2a644ac8659ef6de97a3be35f2e091ef5787fb657d5fa5dfdcb6bbaad2af5.
+   - This is not permission to use Football-Data: automated AI-use rights remain HOLD in #958, and the repository/artifact storage was public. The artifact was not downloaded in this audit.
+3. Current-Form Forward-Only Preview run #46047607281:
+   - 53 tests passed; verified source artifact #15211304625 and its successful parent run/SHA.
+   - quotes_seen=0, v2_current_form_shadow_captured=0, target_outcomes_read=false, target_outcomes_scored=false; 0 paid calls and 0 Supabase writes.
+   - Despite zero quotes, it re-uploaded the 441,814-byte source bundle as public artifact #15223387104, SHA-256 6c96174cf49dcebb3867337f6d6b2171a5d197265ac9008677a30625626c7a42. It was not downloaded.
+4. Free Real-Quote Diagnostic run #46034615245:
+   - 53 tests passed; 10 public-source HTTP requests; quoted_fixtures=0, diagnostic_scored=0, 0 paid-provider requests and 0 Supabase writes.
+   - Public artifact #15215338622, 425,067 bytes, SHA-256 ecc824ea4f823c3744d88308d332c8e3eccd588a159bc42a3d682fb99891d5a8. It was not downloaded.
+
+The current-form source/forward artifacts are a concrete privacy/rights exposure while #781 remains unmerged. Do not fetch, copy, or re-publish their raw source bytes. After the owner manually merges #781, verify fresh main and confirm all live source/quote steps and every always() upload are skipped before treating the hold as active. Do not merge any child independently.
+
+### Fresh read-only pre-match market and Supabase security metadata
+
+- Read-only public.odds_snapshots aggregate selected only league, event identity and snapshot/persistence/kickoff timestamps. It returned 3,966 rows / 327 events, 3,915 satisfying snapshot_time_utc <= created_at < commence_time_utc, and 0 future events with a strict saved pre-match quote across all nine leagues. Serie A: 625 rows / 63 events, 620 strict rows; latest strict snapshot 2026-10-13T14:48:53.042620Z.
+- No result, score, settlement, or target-outcome columns were queried. Database created_at is persistence time, not upstream bookmaker/source publication time; it does not by itself prove source-before-quote.
+- Supabase Security Advisor reports five public tables with RLS disabled (teams, predictions, match_statistics, league_prediction_ledger, epl_ai_market_pair_ledger) and four RLS-enabled tables without policies (competitions, match_stats, matches, standings). No RLS change was applied; enabling RLS without reviewed policies could break access.
+
+### Frozen model and scientific status
+
+- Original candidate SHA remains a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6; training fingerprint remains f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098; 3,799 training rows; original 19 features and 20×2 weights.
+- Protocol blob experiments/market_anchor_1x2_v2_protocol.json remains 65729e9639720e67624c1481190aa22ae606f151; active_lambda=0, shadow_residual_lambda=1, stability gate FAILED, NO_BET, automatic promotion false.
+- The feature-input gate (120 identities) is not the prospective evaluation gate. The latter remains CLOSED at 0/30 eligible completed prospective forecasts; no protected target outcomes were read and no Brier/LogLoss comparison was calculated.
+
+No main change, merge, Supabase write/DDL, paid provider call, production .pkl change, candidate/feature/weight/scaler/imputer change, schedule or other-agent change, bet, publication, refit, threshold tuning or promotion occurred.
+
+---
+
+
 ## 2026-11-27 21:52 UTC — superseding exact-head original V2 checkpoint
 
 This checkpoint supersedes the earlier same-day runtime/PR inventory below. Historical records are retained; they are not permission to continue live source access.
