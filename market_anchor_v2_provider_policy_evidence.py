@@ -69,7 +69,7 @@ def _verify_page_evidence(
     if checked > now:
         raise PermissionError(f"{label} review time is in the future")
     if updated > checked.date():
-        raise PermissionError(f"{label} page update date is later than its review")
+        raise PermissionError(f"{label} page was updated later than policy review")
     if (now - checked).total_seconds() > MAX_POLICY_REVIEW_AGE_SECONDS:
         raise PermissionError(f"{label} review is stale")
 
