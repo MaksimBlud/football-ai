@@ -207,7 +207,7 @@ def count_unique_completed_primary_events(
     )["canonical_unique_fixture_identities"]
 
 
-def _read_completed_primary_event_summary(client: Any, *, now: datetime) -> dict[str, Any]:
+def _read_completed_primary_event_summary_unchecked(client: Any, *, now: datetime) -> dict[str, Any]:
     """Internal metadata query; callers must already have passed source-capture rights."""
     if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must be timezone-aware")
@@ -240,12 +240,18 @@ def _read_completed_primary_event_summary(client: Any, *, now: datetime) -> dict
     )
 
 
+def _read_completed_primary_event_summary(client: Any, *, now: datetime) -> dict[str, Any]:
+    """Guard direct metadata reads before inspecting the client or clock."""
+    require_v2_source_capture_access()
+    return _read_completed_primary_event_summary_unchecked(client, now=now)
+
+
 def read_completed_primary_event_summary(
     client: Any, *, now: datetime
 ) -> dict[str, Any]:
     """Read audited fixture metadata only after source-capture rights are verified."""
     require_v2_source_capture_access()
-    return _read_completed_primary_event_summary(client, now=now)
+    return _read_completed_primary_event_summary_unchecked(client, now=now)
 
 
 def _read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
@@ -364,7 +370,7 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     result = completed.loc[:, list(REQUIRED_COLUMNS)].copy()
     return result, source_row_count - len(completed)
 
-def _capture_source_archive(
+def _capture_source_archive_unchecked(
     *,
     output_dir: Path,
     client: Any,
@@ -385,7 +391,7 @@ def _capture_source_archive(
     ):
         raise FileExistsError("source archive output directory must be absent or empty")
 
-    gate_identity_audit = _read_completed_primary_event_summary(client, now=at)
+    gate_identity_audit = _read_completed_primary_event_summary_unchecked(client, now=at)
     gate_count = gate_identity_audit["canonical_unique_fixture_identities"]
     if not outcome_read_permitted(gate_count):
         raise RuntimeError(
@@ -402,7 +408,7 @@ def _capture_source_archive(
         dir=output_dir.parent,
     ) as temporary_directory:
         staged_dir = Path(temporary_directory)
-        report = _capture_source_archive_contents(
+        report = _capture_source_archive_contents_unchecked(
             output_dir=staged_dir,
             at=at,
             preregistered_gate=preregistered_gate,
@@ -417,7 +423,7 @@ def _capture_source_archive(
         return report
 
 
-def _capture_source_archive_contents(
+def _capture_source_archive_contents_unchecked(
     *,
     output_dir: Path,
     at: datetime,
@@ -561,6 +567,56 @@ def _capture_source_archive_contents(
     return report
 
 
+def _capture_source_archive_contents(
+    *,
+    output_dir: Path,
+    at: datetime,
+    preregistered_gate: Mapping[str, Any],
+    gate_count: int,
+    gate_identity_audit: Mapping[str, Any],
+    access: Mapping[str, Any] | None = None,
+    get=requests.get,
+    history_fetch=fetch_public_history,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Guard direct content construction before paths, callbacks, or writes."""
+    verified_access = require_v2_source_capture_access()
+    return _capture_source_archive_contents_unchecked(
+        output_dir=output_dir,
+        at=at,
+        preregistered_gate=preregistered_gate,
+        gate_count=gate_count,
+        gate_identity_audit=gate_identity_audit,
+        access=verified_access,
+        get=get,
+        history_fetch=history_fetch,
+        clock=clock,
+    )
+
+
+def _capture_source_archive(
+    *,
+    output_dir: Path,
+    client: Any,
+    now: datetime,
+    access: Mapping[str, Any] | None = None,
+    get=requests.get,
+    history_fetch=fetch_public_history,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Guard direct source archive construction before Supabase or filesystem access."""
+    verified_access = require_v2_source_capture_access()
+    return _capture_source_archive_unchecked(
+        output_dir=output_dir,
+        client=client,
+        now=now,
+        access=verified_access,
+        get=get,
+        history_fetch=history_fetch,
+        clock=clock,
+    )
+
+
 def capture_source_archive(
     *,
     output_dir: Path,
@@ -572,7 +628,7 @@ def capture_source_archive(
 ) -> dict:
     """Capture only after provider source rights and private artifact storage are verified."""
     access = require_v2_source_capture_access()
-    return _capture_source_archive(
+    return _capture_source_archive_unchecked(
         output_dir=output_dir,
         client=client,
         now=now,
@@ -596,7 +652,7 @@ def main() -> None:
     if not url or not key:
         raise RuntimeError("Supabase read-only source gate credentials are missing")
     client = create_client(url, key)
-    report = _capture_source_archive(
+    report = _capture_source_archive_unchecked(
         output_dir=args.output_dir,
         client=client,
         now=datetime.now(timezone.utc),
