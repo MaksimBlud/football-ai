@@ -19,6 +19,7 @@ from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL, REQUIRED_COLUMNS,
 )
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
+import serie_a_v2_frozen_shadow_preview as frozen_preview
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
 
 
@@ -27,6 +28,12 @@ ARCHIVE_DECLARED = "2026-10-18T06:30:00+00:00"
 ARTIFACT_CREATED = datetime(2026, 10, 18, 6, 31, tzinfo=timezone.utc)
 PARENT_CREATED = "2026-10-18T06:00:00+00:00"
 PARENT_COMPLETED = "2026-10-18T06:32:00+00:00"
+
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_provider_rights_for_offline_current_form_tests(monkeypatch):
+    monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
 HEAD = "a" * 40
 
 

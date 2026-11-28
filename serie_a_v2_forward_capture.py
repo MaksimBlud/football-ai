@@ -32,6 +32,7 @@ from serie_a_v2_prequote_source_archive_gate import (
 from serie_a_v2_live_access_guard import (
     GITHUB_API, REPOSITORY, require_private_repository, require_v2_live_access,
 )
+import market_anchor_v2_direct_access as v2_access
 
 ARTIFACT_NAME = "serie-a-v2-free-real-quote-diagnostic"
 SOURCE_WORKFLOW_PATH = ".github/workflows/serie-a-v2-free-real-quote-diagnostic.yml"
@@ -68,6 +69,8 @@ def _validated_artifact_download_location(location: Any) -> str:
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     require_v2_live_access()
+    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_inference_access()
     if not token:
         raise ValueError("GitHub Actions read token missing")
     if not url.startswith(GITHUB_API + "/"):
@@ -136,6 +139,9 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     from the verified source workflow. A successful parent run must also have
     finished BEFORE the saved bookmaker quote, not only before inspection.
     """
+    require_v2_live_access()
+    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_inference_access()
     run_id = archive["run_id"]
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source archive is missing a parent GitHub run")
@@ -162,6 +168,8 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     require_v2_live_access()
+    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_inference_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid GitHub artifact id")
     if not token:
@@ -216,6 +224,8 @@ def prepare_forward_capture(
     missing. The database created_at clock is validated separately from the
     bookmaker snapshot_time_utc. All resulting original-V2 probabilities are diagnostic only.
     """
+    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_inference_access()
     if as_of_utc.tzinfo is None or as_of_utc.utcoffset() is None:
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -361,6 +371,8 @@ def capture_forward_with_source_preflight(
     rather than silently falling back to older source bytes.
     """
     require_v2_live_access()
+    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -487,6 +499,8 @@ def main() -> None:
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("wrong GitHub repository scope")
     require_v2_live_access()
+    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_inference_access()
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         raise RuntimeError("GitHub Actions read token is required after the V2 live-access gate")
