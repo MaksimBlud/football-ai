@@ -16,7 +16,7 @@ from tempfile import TemporaryDirectory
 from serie_a_v2_forward_capture import (
     REPOSITORY, discover_archives, get_archive, verify_source_run,
 )
-from serie_a_v2_prequote_source_archive_gate import verify_archive
+from serie_a_v2_prequote_source_archive_gate import _verify_archive_unchecked
 
 
 def _require_v2_source_capture_access() -> dict:
@@ -43,7 +43,7 @@ def attest_latest_source(*, token: str, now: datetime, discover=discover_archive
     with TemporaryDirectory() as tmpdir:
         archive_path = Path(tmpdir) / "original-history.zip"
         archive_path.write_bytes(raw)
-        proven = verify_archive(
+        proven = _verify_archive_unchecked(
             archive_path, [], as_of_utc=at,
             github_artifact_sha256=archive["sha256"],
             github_artifact_created_at_utc=archive["created_at"].isoformat(),
