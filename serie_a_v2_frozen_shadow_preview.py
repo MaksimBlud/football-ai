@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 import market_anchor_1x2_v2_shadow as v2
+from market_anchor_v2_direct_access import require_v2_inference_access, require_v2_source_capture_rights
 from serie_a_v2_live_access_guard import require_private_repository
 
 FROZEN_FILE = Path(__file__).resolve().parent / (
@@ -109,6 +110,7 @@ def shadow_preview(
     This module cannot verify that source; it marks every preview NOT eligible
     for the strict preregistered prospective V2 cohort. Do not persist it.
     """
+    require_v2_inference_access()
     if as_of_utc.tzinfo is None:
         raise ValueError("as_of_utc must be timezone-aware")
     now = as_of_utc.astimezone(timezone.utc)
@@ -250,7 +252,9 @@ def shadow_preview(
 
 
 def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[dict]:
-    """Read existing observations only after the owner live-access and private-repo gate."""
+    """Read existing observations only after provider inference rights and private-repo gates."""
+    require_v2_source_capture_rights()
+    require_v2_inference_access()
     require_private_repository(token=os.environ.get("GITHUB_TOKEN", ""))
     items = (
         client.table("odds_snapshots")
@@ -264,6 +268,9 @@ def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[d
 
 
 def main() -> None:
+    # Deny before importing Supabase or reading the external feature file.
+    require_v2_source_capture_rights()
+    require_v2_inference_access()
     parser = argparse.ArgumentParser(
         description="Pre-match Serie A frozen V2 shadow preview; read-only, no betting or promotion"
     )

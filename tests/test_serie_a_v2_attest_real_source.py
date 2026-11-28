@@ -6,6 +6,7 @@ import json
 import zipfile
 
 import pytest
+import market_anchor_v2_direct_access as direct_access
 
 from serie_a_v2_attest_real_source import attest_latest_source
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
@@ -15,6 +16,15 @@ from serie_a_v2_prequote_source_archive_gate import ARCHIVE_REPORT, SOURCE_DIR
 
 
 NOW = datetime(2026, 10, 14, 16, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_source_access_for_offline_tests(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
 
 
 def source_fixture():
