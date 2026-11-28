@@ -1,3 +1,40 @@
+## 2026-11-28 01:32 UTC — strict current-form gate restacked on provider-rights chain
+
+### New child PR #992 — exact-head regression result
+
+- [PR #992](https://github.com/MaksimBlud/football-ai/pull/992) is OPEN / Draft / mergeable, based on the exact #991 HEAD `6b39c22b8064f029fdf8ddf29a58d150841ed965`; its own exact HEAD is `4be834880a6362b040acc9fe3f2309761288bbb8`.
+- Changed files are limited to:
+  - `serie_a_v2_current_form_source_capture.py`;
+  - `tests/test_serie_a_v2_current_form_source_capture.py`;
+  - `.github/workflows/market-anchor-v2-original-forward-source-first-validation.yml`.
+- It restacks the existing strict date-only fixture identity validation and provider source-capture/private-storage guard from #966/#977 onto the current #991 rights chain. It rejects timestamp-suffixed dates, malformed dates and reversed home/away duplicates after the existing V2-local alias; it requires the owner live flag, provider capture grant and private storage before metadata or archive access. The Supabase feature-input projection remains metadata-only `match_date,home_team,away_team`.
+- The source-first workflow now explicitly includes current-form source capture and rights/provenance files in its path filters, compile list and regression set. Checkout uses `persist-credentials: false`; the current source-capture workflow keeps `GH_TOKEN` scoped to the private-repository check only and does not expose `GITHUB_TOKEN` to the capture step.
+- Final exact-head push run [#46093316910](https://github.com/MaksimBlud/football-ai/actions/runs/46093316910) and PR run [#46093321062](https://github.com/MaksimBlud/football-ai/actions/runs/46093321062) both SUCCESS. Python 3.11: **177 passed**; Python 3.12: **177 passed**; production `.pkl` diff guards passed on both runs.
+- Earlier intermediate commits failed on stale workflow assertions (three, then one). Those failures were fixed; the two final exact-head runs above are the only success evidence cited for #992. No provider request, archive download, Supabase access, inference or target-outcome read occurred.
+- #992 is a child of #991 and must not be merged independently. HUMAN-MERGE only.
+
+### Existing source-rights candidate — #952 remains HOLD, not an integration
+
+The current [#952 audit report](https://github.com/MaksimBlud/football-ai/pull/952) and its checked-in `research/source_rights/bigballs_openapi_recheck_20261126.json` remain the source of truth for Big Balls Sports Data:
+
+- Official Terms permit private response storage and internal model training/evaluation/backtesting, but prohibit raw-feed redistribution.
+- OpenAPI and the gateway endpoint registry mark `GET /v1/matches/{id}/statistics` Free; its schema documents corners, yellow cards and red cards. `expected_goals` is Solo+ and is not part of the frozen 19-feature contract.
+- The dedicated Serie A plan matrix still says Edge while its FAQ says Free; Free season depth is current-season-only. The coverage page is stale/Partial (prior aggregate 4,210/4,591) and current 2026/27 per-fixture/per-field completeness remains unknown.
+- The route is stored-only, persisted hourly, and receives upstream statistics roughly 30 minutes after full time. It can only provide lagged features. It has no documented per-match upstream first-observation or per-field correction timestamp; local receipt UTC + exact raw-body SHA proves project possession before a later quote, not upstream first observation.
+- No authenticated Free response, account, key, API request, download or integration was performed. Upstream field-level rights and retention after account closure remain unresolved. Decision: `HOLD_NO_INTEGRATION`.
+
+### Fresh Supabase security advisor and odds snapshot check
+
+- Security Advisor observed at `2026-11-28T01:30:33.740Z`: RLS disabled on five externally exposed public tables (`league_prediction_ledger`, `teams`, `predictions`, `match_statistics`, `epl_ai_market_pair_ledger`) — severity ERROR. Four tables have RLS enabled but no policies (`competitions`, `match_stats`, `matches`, `standings`) — severity INFO.
+- Remediation references: [RLS disabled in public](https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public) and [RLS enabled with no policy](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy). No DDL or policy change was applied; enabling RLS without reviewed policies may block application access.
+- Latest read-only `odds_snapshots` aggregate is unchanged: 3,966 rows across 327 event identities; 3,915 pass `snapshot_time_utc <= created_at < commence_time_utc`; **zero future events** have a strict persisted quote. Latest strict Serie A snapshot remains `2026-10-13T14:48:53.042620Z`. This predicate is a persistence-time check, not proof of upstream source-before-quote.
+
+### Frozen V2 remains unchanged
+
+Candidate SHA `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`; training fingerprint `f27ab985ae90bb8e94ba8d548847695888c232f43b3e9be93074f39e1a7a5098`; 3,799 training rows; exact 19 ordered features; 20×2 weights; `active_lambda=0`; `shadow_lambda=1`. Historical stability remains FAILED, prospective target-outcome gate remains CLOSED at 0/30, and Brier/LogLoss are not calculated. No model, scaler, imputer, weights, production `.pkl`, Supabase data/schema, main branch, schedule or other-agent setting changed.
+
+---
+
 ## 2026-11-28 01:18 UTC — Original V2 provider-rights restack and fresh runtime audit
 
 This checkpoint supersedes the earlier current-form chain status where noted. It is documentation-only; no live workflow was dispatched.
