@@ -13,6 +13,8 @@ import hashlib
 from io import BytesIO
 import json
 import os
+import re
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -21,6 +23,8 @@ import requests
 from supabase import create_client
 
 from historical_football_signal_lab import FEATURE_SETS
+from market_anchor_1x2_v2_shadow import FIRST_OUTCOME_READ_GATE, outcome_read_permitted
+from market_anchor_v2_direct_access import require_v2_source_capture_access
 from serie_a_runtime_config import SERIE_A_RUNTIME_CONFIG
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes, fetch_public_history
@@ -33,7 +37,9 @@ CURRENT_SEASON = SERIE_A_RUNTIME_CONFIG.finished_results_source.season
 CURRENT_URL = f"{PUBLIC_BASE}/{CURRENT_CODE}/{SERIE_A_RUNTIME_CONFIG.finished_results_source.competition_code}.csv"
 CURRENT_FILENAME = f"serie_a_{CURRENT_CODE}.csv"
 MANIFEST_FILENAME = "serie_a_v2_current_form_source_manifest.json"
-MIN_COMPLETED_FEATURE_SOURCE_EVENTS = 30
+PROTOCOL_PATH = Path(__file__).resolve().parent / "experiments" / "market_anchor_1x2_v2_protocol.json"
+PREREGISTERED_PROTOCOL_BLOB_SHA1 = "65729e9639720e67624c1481190aa22ae606f151"
+MIN_COMPLETED_FEATURE_SOURCE_EVENTS = FIRST_OUTCOME_READ_GATE
 MAX_CURRENT_CSV_BYTES = 2_000_000
 REQUIRED_COLUMNS = (
     "Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
@@ -41,6 +47,61 @@ REQUIRED_COLUMNS = (
 )
 NUMERIC_COLUMNS = ("FTHG", "FTAG", "HC", "AC", "HY", "AY", "HR", "AR")
 V2_ONLY_ALIASES = {"Atalanta BC": "Atalanta"}
+
+
+def _clock_utc(clock, *, field: str) -> datetime:
+    """Require an explicit timezone before persisting source-provenance timestamps."""
+    value = clock()
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{field} must return a timezone-aware datetime")
+    return value.astimezone(timezone.utc)
+
+
+def _archive_creation_utc(clock, *, observed_at: datetime) -> datetime:
+    """Do not write an archive timestamp that predates the source observation."""
+    if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+        raise ValueError("source observation timestamp must be timezone-aware")
+    observed = observed_at.astimezone(timezone.utc)
+    created = _clock_utc(clock, field="source archive creation clock")
+    if created < observed:
+        raise ValueError("source archive creation clock precedes source observation")
+    return created
+
+
+
+def validate_preregistered_outcome_read_gate() -> dict[str, Any]:
+    """Fail closed unless the exact frozen V2 protocol still declares the 30-event gate."""
+    try:
+        raw = PROTOCOL_PATH.read_bytes()
+    except OSError as exc:
+        raise RuntimeError("preregistered V2 outcome-read protocol is unavailable") from exc
+    git_blob_header = b"blob " + str(len(raw)).encode("ascii") + bytes([0])
+    git_blob = hashlib.sha1(git_blob_header + raw).hexdigest()
+    if git_blob != PREREGISTERED_PROTOCOL_BLOB_SHA1:
+        raise RuntimeError("preregistered V2 outcome-read protocol blob changed")
+    try:
+        protocol = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("preregistered V2 outcome-read protocol is malformed") from exc
+    if not isinstance(protocol, dict):
+        raise RuntimeError("preregistered V2 outcome-read protocol is malformed")
+    gate = protocol.get("first_outcome_read_gate")
+    cohort = protocol.get("primary_cohort")
+    if (
+        not isinstance(gate, dict)
+        or not isinstance(cohort, dict)
+        or gate.get("completed_primary_events") != FIRST_OUTCOME_READ_GATE
+        or gate.get("outcome_read_before_gate") is not False
+        or cohort.get("league") != "SERIE_A"
+        or cohort.get("other_leagues_count_toward_gate") is not False
+    ):
+        raise RuntimeError("preregistered V2 outcome-read gate contract mismatch")
+    return {
+        "protocol_path": "experiments/market_anchor_1x2_v2_protocol.json",
+        "protocol_blob_sha1": git_blob,
+        "required_completed_primary_events": FIRST_OUTCOME_READ_GATE,
+        "primary_league": "SERIE_A",
+    }
 
 
 def _canonical_team(value: Any) -> str:
@@ -51,35 +112,103 @@ def _canonical_team(value: Any) -> str:
     return V2_ONLY_ALIASES.get(known, known)
 
 
-def count_unique_completed_primary_events(
+def summarize_completed_primary_events(
     rows: list[Mapping[str, Any]], *, before_date: date
-) -> int:
-    """Count fixture identities only; never request or inspect goal/result fields."""
-    unique: set[tuple[str, str, str]] = set()
+) -> dict[str, Any]:
+    """Audit raw and canonical fixture identities using metadata fields only."""
+    raw_unique: set[tuple[str, str, str]] = set()
+    canonical_unique: set[tuple[str, str, str]] = set()
+    raw_variants_by_canonical: dict[
+        tuple[str, str, str], set[tuple[str, str]]
+    ] = {}
+    # One unordered team pair on one date cannot count twice with reversed
+    # home/away orientation. Normalize aliases before this check so an
+    # Atalanta / Atalanta BC spelling change cannot bypass the event gate.
+    orientation_by_unordered_pair: dict[tuple[str, str, str], tuple[str, str]] = {}
+    eligible_rows = 0
+
     for row in rows:
         match_date = row.get("match_date")
+        if isinstance(match_date, datetime):
+            raise ValueError("primary event date must be date-only, not a timestamp")
         if isinstance(match_date, date):
             parsed_date = match_date
         elif isinstance(match_date, str):
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", match_date) is None:
+                raise ValueError("primary event date must be canonical YYYY-MM-DD")
             try:
-                parsed_date = date.fromisoformat(match_date[:10])
+                parsed_date = date.fromisoformat(match_date)
             except ValueError as exc:
                 raise ValueError("invalid primary event date in gate metadata") from exc
         else:
             raise ValueError("missing primary event date in gate metadata")
+
         if parsed_date >= before_date:
             continue
-        home = _canonical_team(row.get("home_team"))
-        away = _canonical_team(row.get("away_team"))
+        raw_home_value = row.get("home_team")
+        raw_away_value = row.get("away_team")
+        if not isinstance(raw_home_value, str) or not raw_home_value.strip():
+            raise ValueError("completed primary event has an empty team identity")
+        if not isinstance(raw_away_value, str) or not raw_away_value.strip():
+            raise ValueError("completed primary event has an empty team identity")
+        raw_home, raw_away = raw_home_value.strip(), raw_away_value.strip()
+        home, away = _canonical_team(raw_home), _canonical_team(raw_away)
         if home == away:
             raise ValueError("invalid primary event identity in gate metadata")
-        unique.add((parsed_date.isoformat(), home, away))
-    return len(unique)
+
+        date_key = parsed_date.isoformat()
+        unordered_key = (date_key, *sorted((home, away)))
+        previous_orientation = orientation_by_unordered_pair.get(unordered_key)
+        if previous_orientation is not None and previous_orientation != (home, away):
+            raise ValueError("reversed duplicate primary event identity in gate metadata")
+        orientation_by_unordered_pair[unordered_key] = (home, away)
+
+        raw_unique.add((date_key, raw_home, raw_away))
+        canonical_key = (date_key, home, away)
+        canonical_unique.add(canonical_key)
+        raw_variants_by_canonical.setdefault(canonical_key, set()).add((raw_home, raw_away))
+        eligible_rows += 1
+
+    alias_collision_examples = []
+    for (match_date, home, away), variants in sorted(raw_variants_by_canonical.items()):
+        if len(variants) > 1:
+            alias_collision_examples.append({
+                "match_date": match_date,
+                "canonical_home_team": home,
+                "canonical_away_team": away,
+                "raw_team_identity_variants": [
+                    {"home_team": raw_home, "away_team": raw_away}
+                    for raw_home, raw_away in sorted(variants)
+                ],
+            })
+
+    raw_unique_count = len(raw_unique)
+    canonical_unique_count = len(canonical_unique)
+    return {
+        "raw_metadata_rows": len(rows),
+        "eligible_metadata_rows_before_cutoff": eligible_rows,
+        "metadata_rows_on_or_after_cutoff": len(rows) - eligible_rows,
+        "raw_unique_fixture_identities": raw_unique_count,
+        "canonical_unique_fixture_identities": canonical_unique_count,
+        "exact_duplicate_metadata_rows": eligible_rows - raw_unique_count,
+        "alias_collapsed_duplicate_identities": raw_unique_count - canonical_unique_count,
+        "alias_collision_count": len(alias_collision_examples),
+        "alias_collision_examples": alias_collision_examples[:20],
+    }
 
 
-def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
-    """Read only event date/team metadata; no goals, result or settlement columns."""
-    if now.tzinfo is None:
+def count_unique_completed_primary_events(
+    rows: list[Mapping[str, Any]], *, before_date: date
+) -> int:
+    """Count canonical fixture identities only; never inspect score/result fields."""
+    return summarize_completed_primary_events(
+        rows, before_date=before_date
+    )["canonical_unique_fixture_identities"]
+
+
+def _read_completed_primary_event_summary(client: Any, *, now: datetime) -> dict[str, Any]:
+    """Internal metadata query; callers must already have passed source-capture rights."""
+    if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("feature-source gate clock must be timezone-aware")
     cutoff = now.astimezone(timezone.utc).date().isoformat()
     rows: list[dict[str, Any]] = []
@@ -105,7 +234,30 @@ def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
         start += page_size
         if start > 10000:
             raise ValueError("Supabase feature-source gate pagination exceeded safety bound")
-    return count_unique_completed_primary_events(rows, before_date=now.astimezone(timezone.utc).date())
+    return summarize_completed_primary_events(
+        rows, before_date=now.astimezone(timezone.utc).date()
+    )
+
+
+def read_completed_primary_event_summary(
+    client: Any, *, now: datetime
+) -> dict[str, Any]:
+    """Read audited fixture metadata only after source-capture rights are verified."""
+    require_v2_source_capture_access()
+    return _read_completed_primary_event_summary(client, now=now)
+
+
+def _read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
+    return _read_completed_primary_event_summary(
+        client, now=now
+    )["canonical_unique_fixture_identities"]
+
+
+def read_completed_primary_event_count(client: Any, *, now: datetime) -> int:
+    """Compatibility wrapper returning the canonical count after the rights gate."""
+    return read_completed_primary_event_summary(
+        client, now=now
+    )["canonical_unique_fixture_identities"]
 
 
 def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[pd.DataFrame, int]:
@@ -165,34 +317,84 @@ def validate_current_season_csv(raw: bytes, *, captured_at: datetime) -> tuple[p
     return result, len(frame) - len(completed)
 
 
-def capture_source_archive(
+def _capture_source_archive(
     *,
     output_dir: Path,
     client: Any,
     now: datetime,
+    access: Mapping[str, Any],
     get=requests.get,
     history_fetch=fetch_public_history,
     clock=lambda: datetime.now(timezone.utc),
 ) -> dict:
-    """Capture the ten frozen historical seasons plus the gated current-season source."""
-    if now.tzinfo is None:
-        raise ValueError("source capture clock must be timezone-aware")
-    at = now.astimezone(timezone.utc)
-    gate_count = read_completed_primary_event_count(client, now=at)
-    if gate_count < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
+    """Publish only a complete rights-gated archive, using a same-filesystem atomic rename."""
+    at = _clock_utc(lambda: now, field="source capture clock")
+    preregistered_gate = validate_preregistered_outcome_read_gate()
+    output_dir = Path(output_dir)
+    if output_dir.is_symlink():
+        raise ValueError("source archive output directory cannot be a symlink")
+    if output_dir.exists() and (
+        not output_dir.is_dir() or any(output_dir.iterdir())
+    ):
+        raise FileExistsError("source archive output directory must be absent or empty")
+
+    gate_identity_audit = _read_completed_primary_event_summary(client, now=at)
+    gate_count = gate_identity_audit["canonical_unique_fixture_identities"]
+    if not outcome_read_permitted(gate_count):
         raise RuntimeError(
-            "current-form feature-source gate closed: "
-            f"{gate_count} completed primary events < {MIN_COMPLETED_FEATURE_SOURCE_EVENTS}; "
+            "current-form feature-source gate closed by preregistered V2 outcome-read gate: "
+            f"{gate_count} completed primary events < {FIRST_OUTCOME_READ_GATE}; "
             "no current-season source request was made"
         )
+
+    # Stage beside the destination so the final directory rename is atomic.
+    # Any failure after historical files are written discards the whole staging tree.
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{output_dir.name}.staging-",
+        dir=output_dir.parent,
+    ) as temporary_directory:
+        staged_dir = Path(temporary_directory)
+        report = _capture_source_archive_contents(
+            output_dir=staged_dir,
+            at=at,
+            preregistered_gate=preregistered_gate,
+            gate_count=gate_count,
+            gate_identity_audit=gate_identity_audit,
+            access=access,
+            get=get,
+            history_fetch=history_fetch,
+            clock=clock,
+        )
+        os.replace(staged_dir, output_dir)
+        return report
+
+
+def _capture_source_archive_contents(
+    *,
+    output_dir: Path,
+    at: datetime,
+    preregistered_gate: Mapping[str, Any],
+    gate_count: int,
+    gate_identity_audit: Mapping[str, Any],
+    access: Mapping[str, Any],
+    get=requests.get,
+    history_fetch=fetch_public_history,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Build every source byte and manifest inside an unpublished staging directory."""
     output_dir.mkdir(parents=True, exist_ok=True)
     old_history, old_audit = history_fetch(get=get, capture_dir=output_dir)
     if old_history.empty or len(old_audit) != len(_source_codes()):
         raise ValueError("original frozen historical source archive incomplete")
-    response = get(CURRENT_URL, timeout=30)
+    response = get(CURRENT_URL, timeout=30, allow_redirects=False)
     response.raise_for_status()
+    if response.status_code != 200:
+        raise RuntimeError("current-season source requires HTTP 200 without redirects")
+    if getattr(response, "url", None) != CURRENT_URL:
+        raise ValueError("current-season source response URL differs from configured URL")
     raw = response.content
-    observed_at = clock().astimezone(timezone.utc)
+    observed_at = _clock_utc(clock, field="current-season source observation clock")
     current_rows, excluded_rows = validate_current_season_csv(raw, captured_at=observed_at)
     if len(current_rows) < MIN_COMPLETED_FEATURE_SOURCE_EVENTS:
         raise RuntimeError(
@@ -213,6 +415,7 @@ def capture_source_archive(
     }]
     if any(item["season_code"] == CURRENT_CODE for item in old_audit):
         raise ValueError("current season unexpectedly appeared in frozen old-season source list")
+    archive_created_at = _archive_creation_utc(clock, observed_at=observed_at)
     report = {
         "schema_version": SCHEMA_VERSION,
         "experiment_id": "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY",
@@ -221,7 +424,7 @@ def capture_source_archive(
         "workflow_path": WORKFLOW_PATH,
         "git_sha": os.environ.get("GITHUB_SHA", ""),
         "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-        "source_archive_created_at_utc": clock().astimezone(timezone.utc).isoformat(),
+        "source_archive_created_at_utc": archive_created_at.isoformat(),
         "frozen_candidate_sha256": FROZEN_SHA,
         "original_feature_builder_git_blob_sha1": "401b3a0893371bfa4a488ec92a4a54af2678c8f7",
         "feature_count": len(FEATURE_SETS["ALL_FOOTBALL"]),
@@ -234,19 +437,42 @@ def capture_source_archive(
         "current_season_completed_prior_day_rows": len(current_rows),
         "current_season_total_csv_rows": audits[-1]["total_source_rows"],
         "current_season_excluded_incomplete_or_same_day_rows": excluded_rows,
-        "feature_source_gate": {
-            "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
-            "primary_league": "SERIE_A",
-            "season": CURRENT_SEASON,
-            "minimum_completed_primary_events": MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
+        "preregistered_outcome_read_gate": {
+            **preregistered_gate,
             "observed_completed_primary_events": gate_count,
             "checked_at_utc": at.isoformat(),
             "metadata_fields_read": ["match_date", "home_team", "away_team"],
             "score_or_result_fields_selected_for_gate": False,
-            "passed": True,
+            "identity_audit": dict(gate_identity_audit),
+            "passed": outcome_read_permitted(gate_count),
+        },
+        "source_capture_access": {
+            "scope": access["access_scope"],
+            "provider": access["rights"]["provider"],
+            "provider_rights_status": access["rights"]["scope_status"],
+            "rights_manifest_sha256": access["rights"]["rights_manifest_sha256"],
+            "authorization_evidence_sha256": access["rights"]["authorization_evidence_sha256"],
+            "artifact_repository": access["artifact_privacy"]["repository"],
+            "artifact_repository_private": access["artifact_privacy"]["private"],
+            "artifact_storage_policy": access["artifact_privacy"]["storage_policy"],
+        },
+        "feature_source_gate": {
+            "type": "CURRENT_FORM_FEATURE_INPUT_ONLY",
+            "primary_league": "SERIE_A",
+            "season": CURRENT_SEASON,
+            "minimum_completed_primary_events": FIRST_OUTCOME_READ_GATE,
+            "observed_completed_primary_events": gate_count,
+            "checked_at_utc": at.isoformat(),
+            "metadata_fields_read": ["match_date", "home_team", "away_team"],
+            "score_or_result_fields_selected_for_gate": False,
+            "identity_audit": dict(gate_identity_audit),
+            "uses_exact_preregistered_outcome_read_gate": True,
+            "protocol_blob_sha1": preregistered_gate["protocol_blob_sha1"],
+            "passed": outcome_read_permitted(gate_count),
         },
         "feature_policy": {
             "use_current_season_matches_only_as_lagged_features": True,
+            "completed_current_season_match_results_read_for_lagged_features": True,
             "same_calendar_day_matches_excluded": True,
             "future_or_unplayed_fixtures_used": False,
             "model_weights_or_feature_definitions_changed": False,
@@ -269,6 +495,13 @@ def capture_source_archive(
         "paid_provider_calls": 0,
         "supabase_reads": 1,
         "supabase_writes": 0,
+        "current_season_completed_match_results_read_for_lagged_features": True,
+        "target_outcomes_read_for_evaluation": False,
+        "target_outcomes_read_scope": (
+            "legacy target_outcomes_read means evaluation targets only; completed prior "
+            "2026/27 matches are separately read as lagged feature sources after the "
+            "preregistered 30-primary-event gate"
+        ),
         "target_outcomes_read": False,
         "target_outcomes_scored": False,
         "model_refit_or_promotion": False,
@@ -281,7 +514,30 @@ def capture_source_archive(
     return report
 
 
+def capture_source_archive(
+    *,
+    output_dir: Path,
+    client: Any,
+    now: datetime,
+    get=requests.get,
+    history_fetch=fetch_public_history,
+    clock=lambda: datetime.now(timezone.utc),
+) -> dict:
+    """Capture only after provider source rights and private artifact storage are verified."""
+    access = require_v2_source_capture_access()
+    return _capture_source_archive(
+        output_dir=output_dir,
+        client=client,
+        now=now,
+        access=access,
+        get=get,
+        history_fetch=history_fetch,
+        clock=clock,
+    )
+
+
 def main() -> None:
+    access = require_v2_source_capture_access()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
@@ -293,8 +549,11 @@ def main() -> None:
     if not url or not key:
         raise RuntimeError("Supabase read-only source gate credentials are missing")
     client = create_client(url, key)
-    report = capture_source_archive(
-        output_dir=args.output_dir, client=client, now=datetime.now(timezone.utc)
+    report = _capture_source_archive(
+        output_dir=args.output_dir,
+        client=client,
+        now=datetime.now(timezone.utc),
+        access=access,
     )
     print(json.dumps({
         "mode": report["mode"],
