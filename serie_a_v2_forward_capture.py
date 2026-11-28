@@ -169,10 +169,19 @@ def _validated_artifact_download_location(location: Any) -> str:
         raise ValueError("GitHub artifact redirect origin or URL shape is not allowed")
     return location
 
-def _github_json(url: str, *, token: str, get=requests.get) -> dict:
+def _require_v2_private_source_access(*, token: str, get=requests.get) -> None:
+    """Require owner/provider/inference clearance and private storage before source metadata or bytes."""
     require_v2_live_access()
     v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_source_capture_access()
     v2_access.require_v2_inference_access()
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("GitHub Actions read token missing")
+    require_private_repository(token=token, get=get)
+
+
+def _github_json_unchecked(url: str, *, token: str, get=requests.get) -> dict:
+    """Internal GitHub metadata reader; caller must complete the full private preflight."""
     if not token:
         raise ValueError("GitHub Actions read token missing")
     if not url.startswith(GITHUB_API + "/"):
@@ -189,13 +198,19 @@ def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     return data
 
 
-def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+def _github_json(url: str, *, token: str, get=requests.get) -> dict:
+    """Guard direct GitHub metadata reads before making the first request."""
+    _require_v2_private_source_access(token=token, get=get)
+    return _github_json_unchecked(url, token=token, get=get)
+
+
+def _discover_archives_unchecked(*, token: str, get=requests.get) -> list[dict]:
     """Bound pagination and accept only main-branch, correct-name artifacts."""
     out = []
     seen_ids = set()
     for page in range(1, 4):
         url = f"{GITHUB_API}/actions/artifacts?name={ARTIFACT_NAME}&per_page=100&page={page}"
-        data = _github_json(url, token=token, get=get)
+        data = _github_json_unchecked(url, token=token, get=get)
         items = data.get("artifacts")
         if not isinstance(items, list):
             raise ValueError("GitHub response lacks artifact array")
@@ -233,21 +248,24 @@ def discover_archives(*, token: str, get=requests.get) -> list[dict]:
     return sorted(out, key=lambda x: (x["created_at"], x["artifact_id"]), reverse=True)
 
 
-def verify_source_run(archive: dict, *, quote_time: datetime,
-                      token: str, get=requests.get) -> dict:
+def _verify_source_run_unchecked(archive: dict, *, quote_time: datetime,
+                                  token: str, get=requests.get) -> dict:
     """Authenticate artifact parent as our exact successful public CSV collector.
 
     The artifact name+main branch alone are NOT evidence that its bytes came
     from the verified source workflow. A successful parent run must also have
     finished BEFORE the saved bookmaker quote, not only before inspection.
     """
-    require_v2_live_access()
-    v2_access.require_v2_source_capture_rights()
-    v2_access.require_v2_inference_access()
+    if (
+        not isinstance(quote_time, datetime)
+        or quote_time.tzinfo is None
+        or quote_time.utcoffset() is None
+    ):
+        raise ValueError("source quote time must be timezone-aware")
     run_id = archive["run_id"]
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("source archive is missing a parent GitHub run")
-    j = _github_json(f"{GITHUB_API}/actions/runs/{run_id}", token=token, get=get)
+    j = _github_json_unchecked(f"{GITHUB_API}/actions/runs/{run_id}", token=token, get=get)
     if (j.get("id") != run_id or j.get("path") != SOURCE_WORKFLOW_PATH
             or j.get("head_branch") != "main"
             or j.get("head_sha") != archive["head_sha"]
@@ -273,9 +291,26 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
     }
 
 
+
+def discover_archives(*, token: str, get=requests.get) -> list[dict]:
+    """List source artifacts only after rights and private-storage preflight."""
+    _require_v2_private_source_access(token=token, get=get)
+    return _discover_archives_unchecked(token=token, get=get)
+
+
+def verify_source_run(archive: dict, *, quote_time: datetime,
+                      token: str, get=requests.get) -> dict:
+    """Verify source parent metadata only after rights and private-storage preflight."""
+    _require_v2_private_source_access(token=token, get=get)
+    return _verify_source_run_unchecked(
+        archive, quote_time=quote_time, token=token, get=get
+    )
+
+
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     require_v2_live_access()
     v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_source_capture_access()
     v2_access.require_v2_inference_access()
     if type(artifact_id) is not int or artifact_id <= 0:
         raise ValueError("invalid GitHub artifact id")
@@ -465,7 +500,7 @@ def prepare_forward_capture(
     }
 
 
-def capture_forward_with_source_preflight(
+def _capture_forward_with_source_preflight_unchecked(
     archive_metadata: list[dict],
     *,
     as_of_utc: datetime,
@@ -480,8 +515,6 @@ def capture_forward_with_source_preflight(
     the newest source artifact is used: if it is missing or invalid, fail closed
     rather than silently falling back to older source bytes.
     """
-    v2_access.require_v2_source_capture_access()
-    v2_access.require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
         or as_of_utc.tzinfo is None
@@ -604,6 +637,29 @@ def capture_forward_with_source_preflight(
     return report
 
 
+def capture_forward_with_source_preflight(
+    archive_metadata: list[dict],
+    *,
+    as_of_utc: datetime,
+    fetch_quotes,
+    load_archive,
+    verify_parent_run,
+    token: str,
+    repository_get=requests.get,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Public callback entrypoint; require private storage before any callback."""
+    _require_v2_private_source_access(token=token, get=repository_get)
+    return _capture_forward_with_source_preflight_unchecked(
+        archive_metadata,
+        as_of_utc=as_of_utc,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_archive,
+        verify_parent_run=verify_parent_run,
+        write_archives_to=write_archives_to,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -613,6 +669,7 @@ def main() -> None:
         raise RuntimeError("wrong GitHub repository scope")
     require_v2_live_access()
     v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_source_capture_access()
     v2_access.require_v2_inference_access()
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
@@ -620,7 +677,7 @@ def main() -> None:
     # Defense in depth: direct CLI invocation must independently verify private storage.
     require_private_repository(token=token)
     now = datetime.now(timezone.utc)
-    archives = discover_archives(token=token)
+    archives = _discover_archives_unchecked(token=token)
     raw_cache = {}
     parent_cache = {}
 
@@ -632,7 +689,7 @@ def main() -> None:
     def verify_parent(archive: dict, quote_time: datetime) -> dict:
         artifact_id = archive["artifact_id"]
         if artifact_id not in parent_cache:
-            parent_cache[artifact_id] = verify_source_run(
+            parent_cache[artifact_id] = _verify_source_run_unchecked(
                 archive, quote_time=quote_time, token=token
             )
         return parent_cache[artifact_id]
@@ -642,7 +699,7 @@ def main() -> None:
         from database import supabase
         return fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
 
-    report = capture_forward_with_source_preflight(
+    report = _capture_forward_with_source_preflight_unchecked(
         archives,
         as_of_utc=now,
         fetch_quotes=fetch_quotes,

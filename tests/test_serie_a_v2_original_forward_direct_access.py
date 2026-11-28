@@ -88,6 +88,7 @@ def test_original_forward_public_entrypoints_deny_before_inputs_or_callbacks(mon
         original_forward.capture_forward_with_source_preflight(
             _Forbidden(),
             as_of_utc=NOW,
+            token="synthetic-token",
             fetch_quotes=_forbidden,
             load_archive=_forbidden,
             verify_parent_run=_forbidden,
@@ -167,6 +168,7 @@ def test_forward_entrypoints_require_private_source_access_before_callbacks(
             original_forward.capture_forward_with_source_preflight(
                 _Forbidden(),
                 as_of_utc=NOW,
+                token="synthetic-token",
                 fetch_quotes=_forbidden,
                 load_archive=_forbidden,
                 verify_parent_run=_forbidden,

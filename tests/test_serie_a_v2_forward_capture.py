@@ -33,6 +33,15 @@ def _allow_synthetic_provider_rights_for_offline_tests(monkeypatch):
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
 
+
+def _allow_private_repository_for_test(monkeypatch):
+    monkeypatch.setattr(
+        forward_capture,
+        "require_private_repository",
+        lambda *, token, get=None: {"repository": "MaksimBlud/football-ai", "private": True},
+    )
+
+
 from serie_a_v2_frozen_shadow_preview import parse_utc
 
 from serie_a_v2_live_diagnostic_report import _source_codes, PUBLIC_BASE
@@ -237,6 +246,7 @@ def test_future_quote_clock_rejected_without_external_requests():
 
 def test_github_source_catalog_requires_main_sha_and_does_not_trust_missing_digest(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     class Response:
         def __init__(self, data):
             self.data=data
@@ -271,6 +281,7 @@ def test_github_source_catalog_requires_main_sha_and_does_not_trust_missing_dige
 
 def test_successful_exact_source_workflow_and_prequote_completion_required(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     _, artifacts = make_source_archive()
     meta = artifacts[0]
     class Response:
@@ -331,6 +342,7 @@ def test_forward_v2_refuses_unknown_or_late_parent_workflow_before_zip_download(
 
 def test_catalog_rejects_missing_parent_run_identity_even_with_valid_digest(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     class Response:
         def raise_for_status(self): pass
         def json(self):
@@ -370,6 +382,7 @@ def test_original_forward_live_access_defaults_to_denied_before_any_callback(mon
         capture_forward_with_source_preflight(
             [],
             as_of_utc=NOW,
+            token="test-token",
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive"),
             verify_parent_run=lambda *_args: calls.append("parent"),
@@ -379,6 +392,7 @@ def test_original_forward_live_access_defaults_to_denied_before_any_callback(mon
 
 def test_original_forward_verifies_parent_and_zip_sha_before_saved_quote_reader(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     raw, metadata = make_source_archive()
     events = []
 
@@ -398,6 +412,7 @@ def test_original_forward_verifies_parent_and_zip_sha_before_saved_quote_reader(
     report = capture_forward_with_source_preflight(
         metadata,
         as_of_utc=NOW,
+            token="test-token",
         fetch_quotes=fetch_quotes,
         load_archive=load_archive,
         verify_parent_run=verify_parent,
@@ -416,6 +431,7 @@ def test_original_forward_verifies_parent_and_zip_sha_before_saved_quote_reader(
 
 def test_original_forward_does_not_read_quotes_when_source_parent_is_invalid(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     raw, metadata = make_source_archive()
     calls = []
 
@@ -427,6 +443,7 @@ def test_original_forward_does_not_read_quotes_when_source_parent_is_invalid(mon
         capture_forward_with_source_preflight(
             metadata,
             as_of_utc=NOW,
+            token="test-token",
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive") or raw,
             verify_parent_run=reject_parent,
@@ -436,6 +453,7 @@ def test_original_forward_does_not_read_quotes_when_source_parent_is_invalid(mon
 
 def test_original_forward_does_not_read_quotes_when_source_zip_sha_fails(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     raw, metadata = make_source_archive()
     calls = []
 
@@ -443,6 +461,7 @@ def test_original_forward_does_not_read_quotes_when_source_zip_sha_fails(monkeyp
         capture_forward_with_source_preflight(
             metadata,
             as_of_utc=NOW,
+            token="test-token",
             fetch_quotes=lambda: calls.append("quotes") or [quote()],
             load_archive=lambda _artifact_id: calls.append("archive") or raw + b"tampered",
             verify_parent_run=lambda archive, quote_time: (
@@ -454,6 +473,7 @@ def test_original_forward_does_not_read_quotes_when_source_zip_sha_fails(monkeyp
 
 def test_original_forward_blocks_quote_when_parent_completed_after_quote(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     raw, metadata = make_source_archive()
     parent = _fully_verified_parent(
         metadata[0], NOW, completed="2026-10-14T06:30:00Z"
@@ -461,6 +481,7 @@ def test_original_forward_blocks_quote_when_parent_completed_after_quote(monkeyp
     report = capture_forward_with_source_preflight(
         metadata,
         as_of_utc=NOW,
+            token="test-token",
         fetch_quotes=lambda: [quote("2026-10-14T06:00:00Z")],
         load_archive=lambda _artifact_id: raw,
         verify_parent_run=lambda _archive, _quote_time: parent,
@@ -474,6 +495,7 @@ def test_original_forward_blocks_quote_when_parent_completed_after_quote(monkeyp
 
 def test_original_forward_does_not_fallback_to_older_archive_when_newest_sha_is_invalid(monkeypatch):
     monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    _allow_private_repository_for_test(monkeypatch)
     raw, metadata = make_source_archive()
     older = metadata[0]
     newer = {
@@ -496,6 +518,7 @@ def test_original_forward_does_not_fallback_to_older_archive_when_newest_sha_is_
         capture_forward_with_source_preflight(
             [older, newer],
             as_of_utc=NOW,
+            token="test-token",
             fetch_quotes=lambda: calls.append(("quotes", None)) or [quote()],
             load_archive=load_archive,
             verify_parent_run=verify_parent,
@@ -618,8 +641,8 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
         assert now == FrozenNow(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
         return [quote()]
 
-    monkeypatch.setattr(forward_module, "discover_archives", discover_archives)
-    monkeypatch.setattr(forward_module, "verify_source_run", verify_parent)
+    monkeypatch.setattr(forward_module, "_discover_archives_unchecked", discover_archives)
+    monkeypatch.setattr(forward_module, "_verify_source_run_unchecked", verify_parent)
     monkeypatch.setattr(forward_module, "get_archive", download_archive)
     monkeypatch.setattr(forward_module, "fetch_saved_upcoming_serie_a_quotes", read_quotes)
     monkeypatch.setitem(sys.modules, "database", types.SimpleNamespace(supabase=fake_supabase))
@@ -714,8 +737,8 @@ def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quo
     def forbidden_quote_read(*_args, **_kwargs):
         raise AssertionError("invalid source ZIP SHA must block saved quote access")
 
-    monkeypatch.setattr(forward_module, "discover_archives", discover_archives)
-    monkeypatch.setattr(forward_module, "verify_source_run", verify_parent)
+    monkeypatch.setattr(forward_module, "_discover_archives_unchecked", discover_archives)
+    monkeypatch.setattr(forward_module, "_verify_source_run_unchecked", verify_parent)
     monkeypatch.setattr(forward_module, "get_archive", tampered_archive)
     monkeypatch.setattr(
         forward_module, "fetch_saved_upcoming_serie_a_quotes", forbidden_quote_read
@@ -1026,7 +1049,7 @@ def test_original_forward_cli_checks_private_repository_before_archive_discovery
         raise AssertionError("archive discovery must not run for a public repository")
 
     monkeypatch.setattr(forward_capture, "require_private_repository", reject_public_repository)
-    monkeypatch.setattr(forward_capture, "discover_archives", forbidden_discovery)
+    monkeypatch.setattr(forward_capture, "_discover_archives_unchecked", forbidden_discovery)
 
     with pytest.raises(PermissionError, match="repository is public"):
         forward_capture.main()
@@ -1053,7 +1076,7 @@ def test_original_forward_cli_keeps_live_access_gate_before_private_metadata(mon
         raise AssertionError("no metadata or archive access before live-access approval")
 
     monkeypatch.setattr(forward_capture, "require_private_repository", forbidden)
-    monkeypatch.setattr(forward_capture, "discover_archives", forbidden)
+    monkeypatch.setattr(forward_capture, "_discover_archives_unchecked", forbidden)
 
     with pytest.raises(PermissionError, match="MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true"):
         forward_capture.main()
@@ -1061,3 +1084,57 @@ def test_original_forward_cli_keeps_live_access_gate_before_private_metadata(mon
     assert calls == []
     assert not output.parent.exists()
     assert not sources.exists()
+
+def test_direct_github_metadata_helpers_require_private_repository_before_http(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+
+    def reject_public_repository(*, token, get):
+        calls.append(("private", token))
+        raise PermissionError("private repository required")
+
+    def forbidden_http(*args, **kwargs):
+        calls.append(("http", args[0] if args else None))
+        raise AssertionError("GitHub metadata request must not run for a public repository")
+
+    monkeypatch.setattr(forward_capture, "require_private_repository", reject_public_repository)
+    with pytest.raises(PermissionError, match="private repository required"):
+        forward_capture._github_json(
+            "https://api.github.com/repos/MaksimBlud/football-ai/actions/artifacts",
+            token="test-token", get=forbidden_http,
+        )
+    with pytest.raises(PermissionError, match="private repository required"):
+        discover_archives(token="test-token", get=forbidden_http)
+    _, metadata = make_source_archive()
+    with pytest.raises(PermissionError, match="private repository required"):
+        verify_source_run(
+            metadata[0], quote_time=parse_utc("2026-10-14T06:00:00Z"),
+            token="test-token", get=forbidden_http,
+        )
+    assert calls == [
+        ("private", "test-token"),
+        ("private", "test-token"),
+        ("private", "test-token"),
+    ]
+
+
+def test_direct_callback_forward_preflight_requires_private_repository_before_callbacks(monkeypatch):
+    monkeypatch.setenv("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "true")
+    calls = []
+
+    def reject_public_repository(*, token, get):
+        calls.append(("private", token))
+        raise PermissionError("private repository required")
+
+    monkeypatch.setattr(forward_capture, "require_private_repository", reject_public_repository)
+    with pytest.raises(PermissionError, match="private repository required"):
+        capture_forward_with_source_preflight(
+            [],
+            as_of_utc=NOW,
+            token="test-token",
+            fetch_quotes=lambda: calls.append(("quotes", None)),
+            load_archive=lambda _artifact_id: calls.append(("archive", None)),
+            verify_parent_run=lambda *_args: calls.append(("parent", None)),
+        )
+    assert calls == [("private", "test-token")]
+
