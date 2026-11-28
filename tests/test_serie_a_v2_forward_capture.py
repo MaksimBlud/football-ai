@@ -641,8 +641,8 @@ def test_original_forward_cli_verifies_parent_and_zip_before_lazy_database_impor
         assert now == FrozenNow(2026, 10, 14, 7, 0, tzinfo=timezone.utc)
         return [quote()]
 
-    monkeypatch.setattr(forward_module, "discover_archives", discover_archives)
-    monkeypatch.setattr(forward_module, "verify_source_run", verify_parent)
+    monkeypatch.setattr(forward_module, "_discover_archives_unchecked", discover_archives)
+    monkeypatch.setattr(forward_module, "_verify_source_run_unchecked", verify_parent)
     monkeypatch.setattr(forward_module, "get_archive", download_archive)
     monkeypatch.setattr(forward_module, "fetch_saved_upcoming_serie_a_quotes", read_quotes)
     monkeypatch.setitem(sys.modules, "database", types.SimpleNamespace(supabase=fake_supabase))
@@ -737,8 +737,8 @@ def test_original_forward_cli_invalid_archive_sha_blocks_database_import_and_quo
     def forbidden_quote_read(*_args, **_kwargs):
         raise AssertionError("invalid source ZIP SHA must block saved quote access")
 
-    monkeypatch.setattr(forward_module, "discover_archives", discover_archives)
-    monkeypatch.setattr(forward_module, "verify_source_run", verify_parent)
+    monkeypatch.setattr(forward_module, "_discover_archives_unchecked", discover_archives)
+    monkeypatch.setattr(forward_module, "_verify_source_run_unchecked", verify_parent)
     monkeypatch.setattr(forward_module, "get_archive", tampered_archive)
     monkeypatch.setattr(
         forward_module, "fetch_saved_upcoming_serie_a_quotes", forbidden_quote_read
