@@ -12,6 +12,8 @@ def test_pitchapi_remains_hold_until_rights_fields_and_asof_provenance_are_verif
     assert manifest["integration_authorized"] is False
     assert manifest["api_data_terms_url"] is None
     assert manifest["api_data_license"] is None
+    assert manifest["sdk_license"] == "MIT"
+    assert manifest["sdk_license_covers_returned_data"] is False
     assert manifest["upstream_provider_identity_disclosed"] is False
     assert manifest["commercial_internal_model_use_explicitly_permitted"] is False
     assert manifest["private_raw_response_retention_explicitly_permitted"] is False
@@ -25,6 +27,27 @@ def test_pitchapi_remains_hold_until_rights_fields_and_asof_provenance_are_verif
     assert manifest["api_key_created"] is False
     assert manifest["data_downloads"] == 0
     assert manifest["supabase_accessed"] is False
+    assert manifest["supabase_writes"] == 0
+    assert manifest["supabase_ddl"] == 0
+    assert manifest["protected_outcomes_read"] is False
+    assert manifest["feature_calculations"] == 0
+    assert manifest["inference_runs"] == 0
+    assert manifest["production_pickle_changed"] is False
+
+
+def test_pitchapi_free_tier_is_research_evaluation_not_commercial_permission():
+    manifest = json.loads(
+        (ROOT / "research/source_rights/pitchapi.json").read_text(encoding="utf-8")
+    )
+    assert manifest["free_price_eur"] == 0
+    assert manifest["free_daily_request_limit"] == 15000
+    assert manifest["free_sustained_requests_per_minute"] == 600
+    assert manifest["free_live_snapshot_requests_per_minute"] == 60
+    assert manifest["free_usage_scope"] == "side_projects_research_and_evaluation"
+    assert manifest["paid_tier_exists"] is True
+    assert manifest["pro_monthly_price_eur"] == 4.99
+    assert manifest["pro_commercial_use_explicitly_included"] is True
+    assert manifest["free_commercial_use_explicitly_permitted"] is False
 
 
 def test_pitchapi_audit_does_not_change_the_original_v2_candidate():
