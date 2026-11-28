@@ -12,6 +12,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import re
 from typing import Any
 import zipfile
@@ -20,7 +21,7 @@ import pandas as pd
 import requests
 
 from serie_a_v2_frozen_shadow_preview import (
-    fetch_saved_upcoming_serie_a_quotes, parse_utc,
+    FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc,
 )
 from serie_a_v2_live_diagnostic_report import make_report
 from serie_a_v2_prequote_source_archive_gate import (
@@ -34,7 +35,18 @@ GITHUB_API = f"https://api.github.com/repos/{REPOSITORY}"
 SCHEMA_VERSION = "SERIE_A_ORIGINAL_V2_FORWARD_SOURCE_BEFORE_QUOTE_V1"
 
 
+def require_v2_live_access() -> None:
+    """Fail closed unless the owner explicitly clears the V2 source/quote hold."""
+    allowed = os.environ.get("MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED", "false")
+    if allowed.strip().lower() != "true":
+        raise PermissionError(
+            "original V2 source/quote access is held; "
+            "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true is required"
+        )
+
+
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
+    require_v2_live_access()
     if not token:
         raise ValueError("GitHub Actions read token missing")
     if not url.startswith(GITHUB_API + "/"):
@@ -128,6 +140,7 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
+    require_v2_live_access()
     if not isinstance(artifact_id, int) or artifact_id <= 0:
         raise ValueError("invalid artifact id")
     url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
@@ -187,7 +200,17 @@ def prepare_forward_capture(
             "eligible_for_frozen_prospective_cohort": False,
             "no_bet": True,
         }
-        candidates = [a for a in archive_metadata if a["created_at"] < quote_time]
+        candidates = []
+        for archive in archive_metadata:
+            if archive["created_at"] >= quote_time:
+                continue
+            parent_completed_at = archive.get("verified_parent_completed_at_utc")
+            if (
+                parent_completed_at is not None
+                and not parse_utc(parent_completed_at) < quote_time
+            ):
+                continue
+            candidates.append(archive)
         if not candidates:
             rows.append(record)
             continue
@@ -265,6 +288,140 @@ def prepare_forward_capture(
     }
 
 
+def capture_forward_with_source_preflight(
+    archive_metadata: list[dict],
+    *,
+    as_of_utc: datetime,
+    fetch_quotes,
+    load_archive,
+    verify_parent_run,
+    write_archives_to: Path | None = None,
+) -> dict:
+    """Verify the latest source parent and complete ZIP before the first quote read.
+
+    The owner-controlled live-access flag is checked before any callback. Only
+    the newest source artifact is used: if it is missing or invalid, fail closed
+    rather than silently falling back to older source bytes.
+    """
+    require_v2_live_access()
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("source preflight clock must be timezone-aware")
+    if not isinstance(archive_metadata, list):
+        raise ValueError("source archive metadata must be a list")
+    if not callable(fetch_quotes) or not callable(load_archive) or not callable(verify_parent_run):
+        raise ValueError("source preflight callbacks must be callable")
+
+    now = as_of_utc.astimezone(timezone.utc)
+    candidates = []
+    for archive in archive_metadata:
+        if not isinstance(archive, dict):
+            raise ValueError("malformed source archive metadata")
+        created_at = archive.get("created_at")
+        if (
+            not isinstance(created_at, datetime)
+            or created_at.tzinfo is None
+            or created_at.utcoffset() is None
+        ):
+            raise ValueError("source archive metadata requires a timezone-aware created_at")
+        if created_at.astimezone(timezone.utc) < now:
+            candidates.append(archive)
+    if not candidates:
+        raise RuntimeError("no original V2 source archive before quote read")
+
+    chosen = max(
+        candidates,
+        key=lambda item: (
+            item["created_at"].astimezone(timezone.utc),
+            item.get("artifact_id", 0),
+        ),
+    )
+    parent = verify_parent_run(chosen, now)
+    if (
+        not isinstance(parent, dict)
+        or parent.get("run_id") != chosen.get("run_id")
+        or parent.get("run_head_sha") != chosen.get("head_sha")
+        or parent.get("workflow_path") != SOURCE_WORKFLOW_PATH
+        or not parent.get("run_completed_at_utc")
+    ):
+        raise ValueError("source parent workflow identity mismatch before quote read")
+    parent_completed = parse_utc(parent["run_completed_at_utc"])
+    if not parent_completed < now:
+        raise ValueError("source parent workflow is not complete before quote read")
+
+    artifact_id = chosen.get("artifact_id")
+    raw = load_archive(artifact_id)
+    if not isinstance(raw, bytes) or not raw or len(raw) > MAX_ZIP_BYTES:
+        raise ValueError("source archive loader returned empty or oversized bytes")
+    with TemporaryDirectory() as temporary_directory:
+        archive_path = Path(temporary_directory) / "original-v2-source.zip"
+        archive_path.write_bytes(raw)
+        proof = verify_archive(
+            archive_path,
+            [],
+            as_of_utc=now,
+            github_artifact_sha256=chosen.get("sha256"),
+            github_artifact_created_at_utc=chosen["created_at"].isoformat(),
+        )
+    if (
+        proof.get("github_digest_matched") is not True
+        or proof.get("archived_csv_count") != 10
+        or proof.get("historical_match_rows", 0) <= 0
+        or proof.get("original_candidate_sha256") != FROZEN_SHA
+        or proof.get("quotes_checked") != 0
+        or proof.get("eligible_for_frozen_prospective_cohort") is not False
+        or proof.get("no_bet") is not True
+    ):
+        raise ValueError("original V2 source archive preflight is incomplete")
+
+    verified_archive = {
+        **chosen,
+        "verified_parent_completed_at_utc": parent_completed.isoformat(),
+    }
+    # This is deliberately the first point at which the saved-quote reader runs.
+    quotes = fetch_quotes()
+    if not isinstance(quotes, list):
+        raise ValueError("saved quote reader must return a list")
+
+    def load_verified_archive(requested_id: int) -> bytes:
+        if requested_id != artifact_id:
+            raise ValueError("requested source archive was not preflight-verified")
+        return raw
+
+    def verify_parent_for_quote(archive: dict, quote_time: datetime) -> dict:
+        if archive.get("artifact_id") != artifact_id:
+            raise ValueError("requested source parent was not preflight-verified")
+        if not parent_completed < quote_time:
+            raise ValueError("source workflow finished after quote")
+        return parent
+
+    report = prepare_forward_capture(
+        quotes,
+        [verified_archive],
+        as_of_utc=now,
+        load_archive=load_verified_archive,
+        verify_parent_run=verify_parent_for_quote,
+        write_archives_to=write_archives_to,
+    )
+    report["source_preflight"] = {
+        "verified": True,
+        "source_artifact_id": artifact_id,
+        "source_artifact_sha256": chosen["sha256"],
+        "source_artifact_created_at_utc": chosen["created_at"].isoformat(),
+        "source_parent_run_id": parent["run_id"],
+        "source_parent_completed_at_utc": parent_completed.isoformat(),
+        "verified_historical_csv_count": proof["archived_csv_count"],
+        "verified_historical_match_rows": proof["historical_match_rows"],
+        "original_candidate_sha256": proof["original_candidate_sha256"],
+        "quotes_read_after_source_preflight": True,
+    }
+    report["quote_read_skipped"] = False
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -272,15 +429,39 @@ def main() -> None:
     args = parser.parse_args()
     if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
         raise RuntimeError("wrong GitHub repository scope")
+    require_v2_live_access()
     token = os.environ.get("GITHUB_TOKEN", "")
-    from database import supabase
+    if not token:
+        raise RuntimeError("GitHub Actions read token is required after the V2 live-access gate")
     now = datetime.now(timezone.utc)
-    quotes = fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
     archives = discover_archives(token=token)
-    report = prepare_forward_capture(
-        quotes, archives, as_of_utc=datetime.now(timezone.utc),
-        load_archive=lambda artifact_id: get_archive(artifact_id, token=token),
-        verify_parent_run=lambda a, qt: verify_source_run(a, quote_time=qt, token=token),
+    raw_cache = {}
+    parent_cache = {}
+
+    def load_cached_archive(artifact_id: int) -> bytes:
+        if artifact_id not in raw_cache:
+            raw_cache[artifact_id] = get_archive(artifact_id, token=token)
+        return raw_cache[artifact_id]
+
+    def verify_parent(archive: dict, quote_time: datetime) -> dict:
+        artifact_id = archive["artifact_id"]
+        if artifact_id not in parent_cache:
+            parent_cache[artifact_id] = verify_source_run(
+                archive, quote_time=quote_time, token=token
+            )
+        return parent_cache[artifact_id]
+
+    def fetch_quotes():
+        # Import/initialize Supabase only after parent-run and ZIP SHA preflight.
+        from database import supabase
+        return fetch_saved_upcoming_serie_a_quotes(supabase, now=now)
+
+    report = capture_forward_with_source_preflight(
+        archives,
+        as_of_utc=now,
+        fetch_quotes=fetch_quotes,
+        load_archive=load_cached_archive,
+        verify_parent_run=verify_parent,
         write_archives_to=args.sources_output_dir,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -289,7 +470,7 @@ def main() -> None:
         "mode", "quotes_seen", "future_quotes_checked",
         "v2_diagnostic_previews_captured", "blocked_no_prior_source",
         "eligible_for_frozen_prospective_cohort", "paid_provider_calls",
-        "supabase_writes", "no_bet",
+        "supabase_writes", "no_bet", "source_preflight",
     )}, sort_keys=True))
 
 
