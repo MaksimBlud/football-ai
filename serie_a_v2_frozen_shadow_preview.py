@@ -33,6 +33,7 @@ MARKET_KEYS = (
     "event_id", "league", "home_team", "away_team", "commence_time_utc",
     "snapshot_time_utc", "home_odds", "draw_odds", "away_odds",
 )
+SAVED_QUOTE_KEYS = MARKET_KEYS + ("created_at",)
 FEATURE_KEYS = (
     "event_id", "home_team", "away_team", "commence_time_utc",
     "feature_history_cutoff_utc", "features",
@@ -250,7 +251,7 @@ def fetch_saved_upcoming_serie_a_quotes(client: Any, *, now: datetime) -> list[d
     """Read *existing* observations only. No odds provider call or DB write."""
     items = (
         client.table("odds_snapshots")
-        .select(",".join(MARKET_KEYS))
+        .select(",".join(SAVED_QUOTE_KEYS))
         .eq("league", "SERIE_A")
         .gt("commence_time_utc", now.astimezone(timezone.utc).isoformat())
         .order("snapshot_time_utc", desc=True)
