@@ -1,5 +1,6 @@
 """Original V2 direct-entrypoint rights and private-storage regressions."""
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -150,7 +151,7 @@ def test_forward_entrypoints_require_private_source_access_before_callbacks(
         lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
     )
     monkeypatch.setattr(privacy, "require_private_repository_for_source_artifacts", _deny)
-    blocked_dir = __import__("pathlib").Path("/tmp/v2-private-source-must-not-be-created")
+    blocked_dir = Path("/tmp/v2-private-source-must-not-be-created")
 
     with pytest.raises(PermissionError, match="provider inference scope is unresolved"):
         if entrypoint == "prepare_forward_capture":
