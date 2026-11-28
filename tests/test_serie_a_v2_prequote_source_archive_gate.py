@@ -7,6 +7,7 @@ from pathlib import Path
 import zipfile
 
 import pytest
+import market_anchor_v2_direct_access as direct_access
 
 from serie_a_v2_frozen_shadow_preview import FROZEN_SHA
 from serie_a_v2_live_diagnostic_report import PUBLIC_BASE, _source_codes
@@ -17,6 +18,17 @@ from serie_a_v2_prequote_source_archive_gate import (
 AFTER = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
 OBSERVED = datetime(2026, 10, 13, 15, 22, tzinfo=timezone.utc)
 UPLOADED = "2026-10-13T15:22:55Z"
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_rights_for_offline_archive_tests(monkeypatch):
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_rights",
+        lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"},
+    )
+    monkeypatch.setattr(
+        direct_access, "require_v2_inference_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
 
 
 def quote(when="2026-10-13T14:48:53Z"):
