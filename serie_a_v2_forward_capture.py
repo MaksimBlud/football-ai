@@ -15,6 +15,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import re
 from typing import Any
+from urllib.parse import urlsplit
 import zipfile
 
 import pandas as pd
@@ -44,6 +45,60 @@ def require_v2_live_access() -> None:
             "MARKET_ANCHOR_V2_LIVE_ACCESS_ALLOWED=true is required"
         )
 
+
+def require_private_repository(*, token: str, get=requests.get) -> dict:
+    """Fail closed before source/quote access unless this exact repo is private."""
+    require_v2_live_access()
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("GitHub Actions read token missing for private-repository verification")
+    url = GITHUB_API
+    response = get(url, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }, timeout=30, allow_redirects=False)
+    if getattr(response, "url", None) != url:
+        raise ValueError("unexpected GitHub repository metadata response URL")
+    status = getattr(response, "status_code", None)
+    if status != 200:
+        raise ValueError(f"GitHub repository metadata request returned HTTP {status}")
+    data = response.json()
+    if not isinstance(data, dict) or data.get("full_name") != REPOSITORY:
+        raise ValueError("GitHub repository metadata identity mismatch")
+    if data.get("private") is not True:
+        raise PermissionError(
+            "original V2 source/quote access requires the exact GitHub repository to be private"
+        )
+    return {"repository": REPOSITORY, "private": True}
+
+def _validated_artifact_download_location(location: Any) -> str:
+    """Accept only GitHub Actions' HTTPS Azure artifact-download redirect.
+
+    GitHub documents the artifact ZIP endpoint as a 302 redirect. The signed
+    Location is a short-lived bearer URL, so it is fetched separately without
+    forwarding the GitHub token or API headers. Unknown origins fail closed.
+    """
+    if not isinstance(location, str) or not location or len(location) > 4096:
+        raise ValueError("GitHub artifact redirect Location is missing or invalid")
+    try:
+        parsed = urlsplit(location)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("GitHub artifact redirect Location is malformed") from exc
+    host = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or port not in (None, 443)
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.fragment
+        or not re.fullmatch(r"productionresultssa\d+\.blob\.core\.windows\.net", host)
+        or not parsed.path.startswith("/actions-results/")
+        or not parsed.query
+        or any(part in {".", ".."} for part in parsed.path.split("/"))
+    ):
+        raise ValueError("GitHub artifact redirect origin or URL shape is not allowed")
+    return location
 
 def _github_json(url: str, *, token: str, get=requests.get) -> dict:
     require_v2_live_access()
@@ -141,22 +196,47 @@ def verify_source_run(archive: dict, *, quote_time: datetime,
 
 def get_archive(artifact_id: int, *, token: str, get=requests.get) -> bytes:
     require_v2_live_access()
-    if not isinstance(artifact_id, int) or artifact_id <= 0:
-        raise ValueError("invalid artifact id")
-    url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
+    if type(artifact_id) is not int or artifact_id <= 0:
+        raise ValueError("invalid GitHub artifact id")
     if not token:
         raise ValueError("GitHub token required")
-    r = get(url, headers={
+    # Defense in depth: imported callers must not bypass the CLI's private-repo
+    # gate and download source bytes directly from a public repository.
+    require_private_repository(token=token, get=get)
+    url = f"{GITHUB_API}/actions/artifacts/{artifact_id}/zip"
+
+    # Do not let the HTTP client follow an API redirect while carrying the
+    # GitHub token. GitHub documents this endpoint as one 302 with a short-lived
+    # Location URL; the signed storage URL is fetched in a separate bare GET.
+    response = get(url, headers={
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-    }, timeout=90)
-    r.raise_for_status()
-    raw = r.content
+    }, timeout=90, allow_redirects=False)
+    response.raise_for_status()
+    if (
+        getattr(response, "status_code", None) != 302
+        or getattr(response, "url", url) != url
+        or getattr(response, "history", ())
+    ):
+        raise ValueError("GitHub artifact API must return one un-followed HTTP 302")
+
+    location = _validated_artifact_download_location(
+        getattr(response, "headers", {}).get("Location")
+    )
+    download = get(location, timeout=90, allow_redirects=False)
+    download.raise_for_status()
+    if (
+        getattr(download, "status_code", None) != 200
+        or getattr(download, "url", location) != location
+        or getattr(download, "history", ())
+    ):
+        raise ValueError("GitHub artifact storage must return one un-followed HTTP 200")
+
+    raw = download.content
     if not raw or len(raw) > MAX_ZIP_BYTES:
         raise ValueError("missing or oversized source archive")
     return raw
-
 
 def prepare_forward_capture(
     quotes: list[dict], archive_metadata: list[dict], *,
@@ -433,6 +513,8 @@ def main() -> None:
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         raise RuntimeError("GitHub Actions read token is required after the V2 live-access gate")
+    # Defense in depth: direct CLI invocation must independently verify private storage.
+    require_private_repository(token=token)
     now = datetime.now(timezone.utc)
     archives = discover_archives(token=token)
     raw_cache = {}
