@@ -29,6 +29,10 @@ def _allow_synthetic_rights_for_offline_archive_tests(monkeypatch):
         direct_access, "require_v2_inference_access",
         lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
     )
+    monkeypatch.setattr(
+        direct_access, "require_v2_source_capture_access",
+        lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"},
+    )
 
 
 def quote(when="2026-10-13T14:48:53Z"):
