@@ -31,8 +31,10 @@ def test_free_plan_claims_are_not_mistaken_for_authenticated_serie_a_coverage():
     audit = json.loads(RIGHTS.read_text(encoding="utf-8"))
     free = audit["free_plan"]
     assert free["price_usd_per_month"] == 0
-    assert free["requests_per_day"] == 1000
-    assert free["requests_per_month"] == 7000
+    assert free["requests_per_day"] == 2000
+    assert free["requests_per_month"] == 14000
+    assert free["current_limits_valid_through"] == "2026-11-30"
+    assert free["upcoming_from_2026_12_01"] == {"requests_per_day": 1000, "requests_per_month": 7000}
     assert free["all_endpoints_claimed"] is True
     assert free["all_leagues_claimed"] is True
     assert free["serie_a_listed"] is True
