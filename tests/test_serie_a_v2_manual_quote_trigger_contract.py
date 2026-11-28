@@ -1,13 +1,22 @@
 """Prevent event wiring from accidentally turning V2 into paid automated odds calls.
 
-These are static safety regressions complementing the existing paid workflow
-budget contract. The V2 trigger observes a successful *already manual* run;
-it MUST NOT schedule or dispatch a new paid odds workflow.
+These static regressions complement the existing paid-workflow budget contract.
+The V2 trigger may observe an already-manual run, but it must not create paid
+provider calls or a scheduled odds workflow.
 """
 from pathlib import Path
 
 PAID = Path(".github/workflows/serie-a-odds-snapshots.yml")
 FREE = Path(".github/workflows/serie-a-v2-forward-preview.yml")
+HOLD_CI = Path(".github/workflows/market-anchor-v2-paid-odds-workflow-hold.yml")
+
+
+def _step_block(workflow: str, name: str) -> str:
+    marker = f"      - name: {name}\n"
+    start = workflow.index(marker)
+    tail = workflow[start + len(marker) :]
+    next_step = tail.find("\n      - name:")
+    return tail if next_step < 0 else tail[:next_step]
 
 
 def test_original_paid_serie_a_collector_remains_dispatch_only():
@@ -16,11 +25,62 @@ def test_original_paid_serie_a_collector_remains_dispatch_only():
     assert "name: Serie A Odds Snapshots" in header
     assert "workflow_dispatch:" in header
     assert "schedule:" not in header
+    assert "pull_request:" not in header
     assert "workflow_run:" not in header
     assert "push:" not in header
     assert "repository_dispatch:" not in header
     assert "odds_api_budget_guard.py --max-cost 1" in paid
     assert "THE_ODDS_API_KEY:" in paid
+
+
+def test_paid_snapshot_workflow_is_default_denied_and_secrets_are_step_scoped():
+    paid = PAID.read_text(encoding="utf-8")
+    header = paid.split("concurrency:", 1)[0]
+    job_before_steps = paid.split("jobs:", 1)[1].split("steps:", 1)[0]
+
+    assert 'THE_ODDS_API_ACCESS_ALLOWED: "false"' in header
+    # The workflow-level false default must be the only definition; a later
+    # job/step env override could otherwise re-enable paid calls.
+    assert paid.count("THE_ODDS_API_ACCESS_ALLOWED:") == 1
+    assert paid.count('THE_ODDS_API_ACCESS_ALLOWED: "false"') == 1
+    assert 'THE_ODDS_API_ACCESS_ALLOWED: "true"' not in paid
+    assert "THE_ODDS_API_KEY" not in job_before_steps
+    assert "SUPABASE_URL" not in job_before_steps
+    assert "SUPABASE_KEY" not in job_before_steps
+
+    paid_step_names = (
+        "Check required secrets",
+        "Protect provider hard reserve",
+        "Run adaptive Serie A snapshot check",
+    )
+    for name in paid_step_names:
+        block = _step_block(paid, name)
+        assert "if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED == 'true' }}" in block
+
+    assert "if: ${{ env.THE_ODDS_API_ACCESS_ALLOWED != 'true' }}" in _step_block(
+        paid, "Confirm paid provider access is held"
+    )
+    assert "secrets.THE_ODDS_API_KEY" in _step_block(paid, "Protect provider hard reserve")
+    assert "secrets.SUPABASE_URL" in _step_block(paid, "Run adaptive Serie A snapshot check")
+    assert "python odds_api_budget_guard.py --max-cost 1" in _step_block(
+        paid, "Protect provider hard reserve"
+    )
+    assert "python scheduled_serie_a_odds_snapshot.py" in _step_block(
+        paid, "Run adaptive Serie A snapshot check"
+    )
+
+
+def test_paid_odds_hold_ci_is_secret_free_and_never_scheduled():
+    workflow = HOLD_CI.read_text(encoding="utf-8")
+    header = workflow.split("jobs:", 1)[0]
+    assert "push:" in header
+    assert "pull_request:" in header
+    assert "schedule:" not in header
+    assert "workflow_dispatch:" not in header
+    assert "secrets." not in workflow
+    assert "THE_ODDS_API_KEY" not in workflow
+    assert "scheduled_serie_a_odds_snapshot.py" not in workflow
+    assert "pytest -q tests/test_serie_a_v2_manual_quote_trigger_contract.py" in workflow
 
 
 def test_free_original_v2_observes_manual_paid_result_without_starting_provider():
@@ -62,7 +122,9 @@ def test_free_original_v2_still_preserves_archive_proof_and_no_bet():
 def test_current_form_v2_is_a_separate_predeclared_forward_only_cohort():
     import json
 
-    policy = json.loads(Path("experiments/market_anchor_1x2_v2_current_form_policy.json").read_text(encoding="utf-8"))
+    policy = json.loads(
+        Path("experiments/market_anchor_1x2_v2_current_form_policy.json").read_text(encoding="utf-8")
+    )
     assert policy["experiment_id"] == "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY"
     assert policy["frozen_original_candidate"]["artifact_sha256"] == "a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6"
     assert policy["feature_source"]["current_season_results_allowed_only_as_lagged_inputs"] is True
@@ -91,8 +153,8 @@ def test_current_form_source_capture_and_forward_preview_never_trigger_paid_odds
     assert '"Serie A V2 Current-Form Source Capture"' in forward
     assert '"Serie A Odds Snapshots"' in forward
     assert "github.event.workflow_run.event == 'workflow_dispatch'" in forward
-    assert 'schedule:' in source
-    assert 'workflow_dispatch:' in source
-    assert 'workflow_dispatch:' in forward
-    assert 'push:' in forward
+    assert "schedule:" in source
+    assert "workflow_dispatch:" in source
+    assert "workflow_dispatch:" in forward
+    assert "push:" in forward
     assert '"serie_a_v2_current_form_forward_capture.py"' in forward
