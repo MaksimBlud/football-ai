@@ -17,6 +17,7 @@ on:
       - research/v2-current-form-real-utc-offset-guards-on-1004-20261128-run11
       - research/v2-original-forward-validation-pathfilter-on-1005-20261128-run11
       - research/v2-current-form-gate-source-identity-reconciliation-on-1006-20261128-run11
+      - research/v2-football-data-policy-evidence-20261127-on-1007-run11
     paths:
       - "serie_a_v2_frozen_shadow_preview.py"
       - "tests/test_serie_a_v2_frozen_shadow_preview.py"
@@ -36,6 +37,8 @@ on:
       - "market_anchor_1x2_v2_shadow.py"
       - "market_anchor_v2_saved_cohort_replay.py"
       - "market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_training_rights.py"
       - "market_anchor_v2_provider_policy_evidence.py"
       - "historical_football_signal_lab.py"
       - "market_anchor_1x2_v1.py"
@@ -50,7 +53,8 @@ on:
       - "market_anchor_v2_source_capture_rights.py"
       - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
-      - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
+      - "research/source_rights/evidence/football_data_data_page_20261127.md"
+      - "research/source_rights/evidence/football_data_contact_fair_use_20261127.md"
       - "tests/test_serie_a_v2_forward_runtime_lock.py"
       - "research/locks/market-anchor-v2-forward-py311.lock"
       - "research/locks/market-anchor-v2-forward-py312.lock"
@@ -80,6 +84,8 @@ on:
       - "market_anchor_1x2_v2_shadow.py"
       - "market_anchor_v2_saved_cohort_replay.py"
       - "market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_source_rights.py"
+      - "tests/test_market_anchor_v2_training_rights.py"
       - "market_anchor_v2_provider_policy_evidence.py"
       - "historical_football_signal_lab.py"
       - "market_anchor_1x2_v1.py"
@@ -94,7 +100,8 @@ on:
       - "market_anchor_v2_source_capture_rights.py"
       - "market_anchor_v2_artifact_privacy.py"
       - "research/source_rights/football_data_co_uk.json"
-      - "research/source_rights/evidence/football_data_contact_fair_use_20261124.md"
+      - "research/source_rights/evidence/football_data_data_page_20261127.md"
+      - "research/source_rights/evidence/football_data_contact_fair_use_20261127.md"
       - "tests/test_serie_a_v2_forward_runtime_lock.py"
       - "research/locks/market-anchor-v2-forward-py311.lock"
       - "research/locks/market-anchor-v2-forward-py312.lock"
@@ -176,6 +183,8 @@ jobs:
             tests/test_serie_a_v2_frozen_shadow_preview.py \
             tests/test_market_anchor_1x2_v2_shadow.py \
             tests/test_market_anchor_v2_saved_cohort_replay.py \
+            tests/test_market_anchor_v2_source_rights.py \
+            tests/test_market_anchor_v2_training_rights.py \
             tests/test_serie_a_v2_forward_runtime_lock.py
       - name: Guard production model binaries
         run: git diff --exit-code origin/main...HEAD -- '*.pkl'
