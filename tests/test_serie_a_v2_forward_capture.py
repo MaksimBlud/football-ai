@@ -9,6 +9,7 @@ import sys
 import serie_a_v2_forward_capture as forward_capture
 import market_anchor_v2_direct_access as direct_access
 import serie_a_v2_frozen_shadow_preview as frozen_preview
+import serie_a_v2_live_diagnostic_report as live_diagnostic
 import pytest
 
 
@@ -24,6 +25,7 @@ def _allow_synthetic_provider_rights_for_offline_tests(monkeypatch):
     )
     monkeypatch.setattr(frozen_preview, "require_v2_source_capture_rights", lambda: {"scope_status": "SYNTHETIC_TEST_ONLY"})
     monkeypatch.setattr(frozen_preview, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
+    monkeypatch.setattr(live_diagnostic, "require_v2_inference_access", lambda: {"access_scope": "SYNTHETIC_TEST_ONLY"})
 
 from serie_a_v2_frozen_shadow_preview import parse_utc
 
