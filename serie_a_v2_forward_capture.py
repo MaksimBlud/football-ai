@@ -26,7 +26,7 @@ from serie_a_v2_frozen_shadow_preview import (
 )
 from serie_a_v2_live_diagnostic_report import make_report
 from serie_a_v2_prequote_source_archive_gate import (
-    ARCHIVE_REPORT, SOURCE_DIR, MAX_ZIP_BYTES, verify_archive,
+    ARCHIVE_REPORT, SOURCE_DIR, MAX_ZIP_BYTES, _verify_archive_unchecked,
 )
 
 from serie_a_v2_live_access_guard import (
@@ -331,7 +331,7 @@ def prepare_forward_capture(
     missing. The database created_at clock is validated separately from the
     bookmaker snapshot_time_utc. All resulting original-V2 probabilities are diagnostic only.
     """
-    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_source_capture_access()
     v2_access.require_v2_inference_access()
     if as_of_utc.tzinfo is None or as_of_utc.utcoffset() is None:
         raise ValueError("as_of_utc must be timezone-aware")
@@ -410,7 +410,7 @@ def prepare_forward_capture(
         with TemporaryDirectory() as td:
             src = Path(td) / "original_source.zip"
             src.write_bytes(raw)
-            gate = verify_archive(
+            gate = _verify_archive_unchecked(
                 src, [q], as_of_utc=now,
                 github_artifact_sha256=chosen["sha256"],
                 github_artifact_created_at_utc=chosen["created_at"].isoformat(),
@@ -480,8 +480,7 @@ def capture_forward_with_source_preflight(
     the newest source artifact is used: if it is missing or invalid, fail closed
     rather than silently falling back to older source bytes.
     """
-    require_v2_live_access()
-    v2_access.require_v2_source_capture_rights()
+    v2_access.require_v2_source_capture_access()
     v2_access.require_v2_inference_access()
     if (
         not isinstance(as_of_utc, datetime)
@@ -538,7 +537,7 @@ def capture_forward_with_source_preflight(
     with TemporaryDirectory() as temporary_directory:
         archive_path = Path(temporary_directory) / "original-v2-source.zip"
         archive_path.write_bytes(raw)
-        proof = verify_archive(
+        proof = _verify_archive_unchecked(
             archive_path,
             [],
             as_of_utc=now,
