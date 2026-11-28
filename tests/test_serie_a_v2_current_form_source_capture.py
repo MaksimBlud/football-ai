@@ -922,3 +922,78 @@ def test_current_csv_requires_full_time_result_to_match_exact_goal_comparison():
         validate_current_season_csv(
             raw, captured_at=datetime(2026, 10, 18, 8, tzinfo=timezone.utc)
         )
+
+
+class _ForbiddenSourceCaptureInput:
+    def __bool__(self):
+        raise AssertionError("source-capture input inspected before rights gate")
+
+    def __iter__(self):
+        raise AssertionError("source-capture input iterated before rights gate")
+
+    def __len__(self):
+        raise AssertionError("source-capture input length inspected before rights gate")
+
+    def __getitem__(self, _key):
+        raise AssertionError("source-capture input indexed before rights gate")
+
+    def get(self, *_args, **_kwargs):
+        raise AssertionError("source-capture mapping inspected before rights gate")
+
+    def __fspath__(self):
+        raise AssertionError("source-capture path inspected before rights gate")
+
+
+def test_direct_internal_metadata_reader_denies_before_supabase_access(monkeypatch):
+    def deny():
+        raise PermissionError("source-capture scope unresolved")
+
+    class ForbiddenClient:
+        def table(self, *_args, **_kwargs):
+            pytest.fail("Supabase metadata was accessed before source-capture rights")
+
+    monkeypatch.setattr(source_capture, "require_v2_source_capture_access", deny)
+    with pytest.raises(PermissionError, match="source-capture scope unresolved"):
+        source_capture._read_completed_primary_event_summary(
+            ForbiddenClient(), now=_ForbiddenSourceCaptureInput()
+        )
+
+
+def test_direct_internal_archive_builder_denies_before_input_paths_or_callbacks(monkeypatch):
+    def deny():
+        raise PermissionError("source-capture scope unresolved")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("source archive callback ran before source-capture rights")
+
+    monkeypatch.setattr(source_capture, "require_v2_source_capture_access", deny)
+    with pytest.raises(PermissionError, match="source-capture scope unresolved"):
+        source_capture._capture_source_archive(
+            output_dir=_ForbiddenSourceCaptureInput(),
+            client=_ForbiddenSourceCaptureInput(),
+            now=_ForbiddenSourceCaptureInput(),
+            access=_ForbiddenSourceCaptureInput(),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
+
+
+def test_direct_internal_archive_contents_builder_denies_before_path_or_callbacks(monkeypatch):
+    def deny():
+        raise PermissionError("source-capture scope unresolved")
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("source archive contents callback ran before source-capture rights")
+
+    monkeypatch.setattr(source_capture, "require_v2_source_capture_access", deny)
+    with pytest.raises(PermissionError, match="source-capture scope unresolved"):
+        source_capture._capture_source_archive_contents(
+            output_dir=_ForbiddenSourceCaptureInput(),
+            at=_ForbiddenSourceCaptureInput(),
+            preregistered_gate=_ForbiddenSourceCaptureInput(),
+            gate_count=_ForbiddenSourceCaptureInput(),
+            gate_identity_audit=_ForbiddenSourceCaptureInput(),
+            access=_ForbiddenSourceCaptureInput(),
+            get=forbidden,
+            history_fetch=forbidden,
+        )
