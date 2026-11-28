@@ -12,8 +12,8 @@
   },
   "free_plan": {
     "price_usd_per_month": 0,
-    "requests_per_day": 1000,
-    "requests_per_month": 7000,
+    "requests_per_day": 2000,
+    "requests_per_month": 14000,
     "all_endpoints_claimed": true,
     "all_leagues_claimed": true,
     "serie_a_listed": true,
@@ -22,7 +22,12 @@
     "exact_historical_season_depth_verified": false,
     "per_fixture_stats_completeness_verified": false,
     "free_plan_requires_api_key": true,
-    "odds_available": false
+    "odds_available": false,
+    "current_limits_valid_through": "2026-11-30",
+    "upcoming_from_2026_12_01": {
+      "requests_per_day": 1000,
+      "requests_per_month": 7000
+    }
   },
   "documented_data": {
     "fixture_scores_and_results": true,
