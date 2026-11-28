@@ -28,6 +28,7 @@ from serie_a_v2_current_form_source_capture import (
     CURRENT_CODE, CURRENT_FILENAME, CURRENT_SEASON, CURRENT_URL,
     MANIFEST_FILENAME, MIN_COMPLETED_FEATURE_SOURCE_EVENTS,
     REQUIRED_COLUMNS, validate_current_season_csv,
+    _current_season_fixture_identity_audit,
 )
 from serie_a_v2_frozen_shadow_preview import (
     FROZEN_SHA, fetch_saved_upcoming_serie_a_quotes, parse_utc, shadow_preview, _guard_outcome_free,
@@ -233,7 +234,7 @@ def verify_and_load_archive(
         if len(names) != len(expected) or set(names) != expected:
             raise ValueError("current-form archive has unexpected/missing files")
         manifest = json.loads(z.read(MANIFEST_FILENAME))
-        if (manifest.get("schema_version") != "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V1"
+        if (manifest.get("schema_version") != "SERIE_A_V2_CURRENT_FORM_SOURCE_CAPTURE_V2"
                 or manifest.get("experiment_id") != "MARKET_ANCHOR_1X2_V2_CURRENT_FORM_FORWARD_ONLY"
                 or manifest.get("workflow_path") != SOURCE_WORKFLOW_PATH
                 or manifest.get("git_sha") != archive.get("head_sha")
@@ -320,6 +321,38 @@ def verify_and_load_archive(
         if (len(current_frame) != manifest.get("current_season_completed_prior_day_rows")
                 or current_item.get("completed_source_rows") != len(current_frame)):
             raise ValueError("current-season completed row count mismatch")
+        current_identity_audit = _current_season_fixture_identity_audit(current_frame)
+        declared_identity_audit = manifest.get("current_season_source_identity_audit")
+        gate_identity_audit = gate.get("identity_audit")
+        preregistered_gate = manifest.get("preregistered_outcome_read_gate")
+        preregistered_identity_audit = (
+            preregistered_gate.get("identity_audit")
+            if isinstance(preregistered_gate, dict) else None
+        )
+        identity_fields = (
+            "canonical_unique_fixture_identities",
+            "canonical_fixture_identity_set_sha256",
+        )
+        if not isinstance(declared_identity_audit, dict) or any(
+            declared_identity_audit.get(field) != current_identity_audit[field]
+            for field in identity_fields
+        ):
+            raise ValueError("current-season source identity audit does not match archived CSV bytes")
+        if not isinstance(gate_identity_audit, dict) or any(
+            gate_identity_audit.get(field) != current_identity_audit[field]
+            for field in identity_fields
+        ):
+            raise ValueError("current-season source fixture identity set does not match feature gate metadata")
+        if (
+            gate.get("observed_completed_primary_events")
+            != current_identity_audit["canonical_unique_fixture_identities"]
+            or not isinstance(preregistered_identity_audit, dict)
+            or any(
+                preregistered_identity_audit.get(field) != gate_identity_audit.get(field)
+                for field in identity_fields
+            )
+        ):
+            raise ValueError("current-season source identity audit conflicts with preregistered outcome gate")
         current_dates = pd.to_datetime(current_frame["Date"], dayfirst=True, format="mixed", errors="raise")
         if current_dates.empty or (current_dates < OLD_CUTOFF).any():
             raise ValueError("current-season archive contains pre-2026/27 rows or no usable rows")
