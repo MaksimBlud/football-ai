@@ -6630,6 +6630,6 @@ PR #1007 is based on the #1006 head; PR #1008 is based on #1007. All remain Draf
 
 ### Frozen model and safety
 
-The original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: exactly 19 features, original 20×2 weights, `active_lambda=0`, `shadow_lambda=1), historical stability gate FAILED, no automatic promotion. No independent prospective Brier/LogLoss result exists; superiority over market is not established.
+The original candidate remains `a9d5abc2eee762991a5272d8bb530f76cd008b4b4a3eb48ff2072f374626ade6`: exactly 19 features, original 20×2 weights, `active_lambda=0`, `shadow_lambda=1`, historical stability gate FAILED, no automatic promotion. No independent prospective Brier/LogLoss result exists; superiority over market is not established.
 
 No merge or main change, Supabase write/DDL, paid API request, protected target-outcome read, production `.pkl` edit, candidate/feature/weight/contract change, betting action, promotion, schedule change, or other-agent setting change occurred in this cycle.
