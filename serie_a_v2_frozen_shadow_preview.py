@@ -111,8 +111,12 @@ def shadow_preview(
     for the strict preregistered prospective V2 cohort. Do not persist it.
     """
     require_v2_inference_access()
-    if as_of_utc.tzinfo is None:
-        raise ValueError("as_of_utc must be timezone-aware")
+    if (
+        not isinstance(as_of_utc, datetime)
+        or as_of_utc.tzinfo is None
+        or as_of_utc.utcoffset() is None
+    ):
+        raise ValueError("as_of_utc must have a real UTC offset")
     now = as_of_utc.astimezone(timezone.utc)
     original = load_verified_original()
     feature_keys = tuple(original["features"])
